@@ -1,0 +1,49 @@
+# Execution Log
+
+- 2026-03-11 Generated AEM project using AEM Project Archetype 56 with appId `aemassetsmetadata` and groupId `com.example.aemassets`.
+- 2026-03-11 Enforced Java 21 in the root Maven build.
+- 2026-03-11 Added domain model scaffolding for asset metadata and knowledge graph services.
+- 2026-03-11 Added initial ontology file in Turtle format under `core/src/main/resources/ontology`.
+- 2026-03-11 Added BMAD, beads, and Gastown documentation templates.
+- 2026-03-11 Added ubiquitous language and decision log.
+- 2026-03-11 Implemented SimpleOntologyRegistry with tests.
+- 2026-03-11 Added Bead 0002 for ontology registry.
+- 2026-03-11 Updated BMAD spec with working definition and delivery plan.
+- 2026-03-11 Added AEM metadata mapping service and tests.
+- 2026-03-11 Added Bead 0003 for AEM metadata mapping.
+- 2026-03-11 Added graph adapter and indexing service with tests.
+- 2026-03-11 Added Bead 0004 for graph adapter.
+- 2026-03-11 Added AEM adapter contract and ingestion pipeline with tests.
+- 2026-03-11 Added Bead 0005 for adapter contract.
+- 2026-03-11 Added Sling-based AEM metadata source with tests.
+- 2026-03-11 Added Bead 0006 for Sling metadata source.
+- 2026-03-11 Added OSGi wiring and DAM change listener.
+- 2026-03-11 Added Bead 0007 for OSGi wiring and listener.
+- 2026-03-11 Added graph triple mapping and Turtle serializer.
+- 2026-03-11 Added Bead 0008 for graph export.
+- 2026-03-11 Added graph export service and Sling endpoint.
+- 2026-03-11 Added Bead 0009 for graph export endpoint.
+- 2026-03-11 Added query service and JSON metadata endpoint.
+- 2026-03-11 Added Bead 0010 for query endpoint.
+- 2026-03-11 Added operations guide and documentation index.
+- 2026-03-11 Added Bead 0011 for operations documentation.
+- 2026-03-11 Added operations documentation and cleanup bead.
+- 2026-03-11 Consolidated in-memory graph adapter tests.
+- 2026-03-11 Added servlet-level endpoint tests.
+- 2026-03-11 Added Bead 0013 for endpoint tests.
+- 2026-03-11 Added service user mapping config and repo-init ACLs.
+- 2026-03-11 Added Bead 0014 for config package.
+- 2026-03-11 Added graph storage strategy documentation and config placeholder.
+- 2026-03-11 Added Bead 0015 for graph storage design.
+- 2026-03-11 Added SPARQL adapter stub and config types.
+- 2026-03-11 Added Bead 0016 for SPARQL adapter.
+- 2026-03-11 Added graph adapter selection wiring.
+- 2026-03-11 Added Bead 0017 for adapter selection.
+- 2026-03-11 Consolidated KnowledgeGraphService to single provider with optional SPARQL wiring.
+- 2026-03-11 Added graph storage and SPARQL config files.
+- 2026-03-11 Added Bead 0018 for graph config.
+- 2026-03-11 Added SPARQL query builder and readback contract.
+- 2026-03-11 Added Bead 0019 for SPARQL readback.
+- 2026-03-12 Expanded documentation for external metadata ingestion and endpoint usage.
+- 2026-03-12 Added show-and-tell guide with demo flows and expected output.
+- 2026-03-12 Added demo content metadata and curl script for live show-and-tell.

@@ -1,0 +1,5 @@
+{
+    "user.mapping": [
+        "com.example.aemassets:aemassetsmetadata=aem-assets-metadata-svc"
+    ]
+}

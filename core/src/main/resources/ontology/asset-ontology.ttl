@@ -1,0 +1,30 @@
+@prefix aem: <https://example.com/aem-assets-ontology#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix schema: <http://schema.org/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# Core asset concepts
+
+aem:Asset a schema:CreativeWork .
+
+aem:UsageRights a schema:CreativeWork .
+
+aem:Brand a schema:Organization .
+
+aem:hasUsageRights a rdf:Property ;
+  schema:domainIncludes aem:Asset ;
+  schema:rangeIncludes aem:UsageRights .
+
+aem:licensedBy a rdf:Property ;
+  schema:domainIncludes aem:Asset ;
+  schema:rangeIncludes schema:Organization .
+
+aem:assetChecksum a rdf:Property ;
+  schema:domainIncludes aem:Asset ;
+  schema:rangeIncludes xsd:string .
+
+# Dublin Core alignment
+
+aem:description a rdf:Property ;
+  schema:domainIncludes aem:Asset ;
+  schema:rangeIncludes schema:Text .
