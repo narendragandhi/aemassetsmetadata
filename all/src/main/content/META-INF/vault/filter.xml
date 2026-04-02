@@ -15,6 +15,6 @@
   ~ limitations under the License.
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
 <workspaceFilter version="1.0">
-    <filter root="/apps/aemassetsmetadata-packages"/>
-    <filter root="/apps/aemassetsmetadata-vendor-packages"/>
+    <filter root="/apps/semanticdam-packages"/>
+    <filter root="/apps/semanticdam-vendor-packages"/>
 </workspaceFilter>

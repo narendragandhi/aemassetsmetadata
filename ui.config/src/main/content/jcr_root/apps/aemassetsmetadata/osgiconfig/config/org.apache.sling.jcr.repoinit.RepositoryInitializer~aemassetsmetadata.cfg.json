@@ -1,9 +1,0 @@
-{
-    "scripts": [
-        "create path (sling:OrderedFolder) /content/dam/aemassetsmetadata",
-        "create path (nt:unstructured) /content/dam/aemassetsmetadata/jcr:content",
-        "set properties on /content/dam/aemassetsmetadata/jcr:content\n  set cq:conf{String} to /conf/aemassetsmetadata\n  set jcr:title{String} to \"AEM Assets Metadata\"\nend",
-        "create service user aem-assets-metadata-svc",
-        "set ACL for aem-assets-metadata-svc\n  allow jcr:read on /content/dam\nend"
-    ]
-}

@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <workspaceFilter version="1.0">
-    <filter root="/conf/aemassetsmetadata" mode="merge"/>
-    <filter root="/content/aemassetsmetadata" mode="merge"/>
-    <filter root="/content/dam/aemassetsmetadata" mode="merge">
-        <exclude pattern="/content/dam/aemassetsmetadata(/.*)?"/>
-        <include pattern="/content/dam/aemassetsmetadata/jcr:content(/.*)?"/>
+    <filter root="/conf/semanticdam" mode="merge"/>
+    <filter root="/content/semanticdam" mode="merge"/>
+    <filter root="/content/dam/semanticdam" mode="merge">
+        <exclude pattern="/content/dam/semanticdam(/.*)?"/>
+        <include pattern="/content/dam/semanticdam/jcr:content(/.*)?"/>
     </filter>
-    <filter root="/content/dam/aemassetsmetadata/asset.jpg" mode="merge"/>
-    <filter root="/content/experience-fragments/aemassetsmetadata" mode="merge"/>
+    <filter root="/content/dam/semanticdam/asset.jpg" mode="merge"/>
+    <filter root="/content/experience-fragments/semanticdam" mode="merge"/>
 </workspaceFilter>

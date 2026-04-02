@@ -20,7 +20,7 @@ This guide demonstrates how the repo behaves end-to-end, with both AEM-authored 
 ## Demo Flow (With Included Content Package)
 
 1. Deploy the project with `mvn clean install -PautoInstallSinglePackage`.
-1. Use the demo asset at `/content/dam/aemassetsmetadata/asset.jpg`.
+1. Use the demo asset at `/content/dam/semanticdam/asset.jpg`.
 1. Run the demo script: `bash demo/curl-demo.sh`.
 
 ## Demo Flow (External Metadata Ingestion)
@@ -36,27 +36,31 @@ The JSON output is a normalized list of predicate/object statements:
 
 ```json
 {
-  "assetId": "/content/dam/aemassetsmetadata/asset.jpg",
+  "assetId": "/content/dam/semanticdam/asset.jpg",
   "statements": [
     {
       "predicate": "http://purl.org/dc/terms/title",
       "object": "Demo Asset 01",
-      "objectIsUri": false
+      "objectIsUri": false,
+      "source": "AEM"
     },
     {
       "predicate": "http://purl.org/dc/terms/description",
       "object": "Show-and-tell asset for knowledge graph metadata",
-      "objectIsUri": false
+      "objectIsUri": false,
+      "source": "AEM"
     },
     {
-      "predicate": "http://purl.org/dc/terms/format",
-      "object": "image/jpeg",
-      "objectIsUri": false
+      "predicate": "https://example.com/aem-assets-ontology#sku",
+      "object": "SUM-2026-X1",
+      "objectIsUri": false,
+      "source": "PIM"
     },
     {
-      "predicate": "https://example.com/aem-assets-ontology#brand",
-      "object": "Summit",
-      "objectIsUri": false
+      "predicate": "https://example.com/aem-assets-ontology#belongsToCampaign",
+      "object": "Global Summit 2026",
+      "objectIsUri": false,
+      "source": "Workfront"
     }
   ]
 }
@@ -65,15 +69,15 @@ The JSON output is a normalized list of predicate/object statements:
 ## Expected Turtle Shape
 
 ```turtle
-<https://example.com/aem-assets/asset/content/dam/aemassetsmetadata/asset.jpg> <http://purl.org/dc/terms/title> "Demo Asset 01" .
-<https://example.com/aem-assets/asset/content/dam/aemassetsmetadata/asset.jpg> <http://purl.org/dc/terms/description> "Show-and-tell asset for knowledge graph metadata" .
-<https://example.com/aem-assets/asset/content/dam/aemassetsmetadata/asset.jpg> <http://purl.org/dc/terms/format> "image/jpeg" .
-<https://example.com/aem-assets/asset/content/dam/aemassetsmetadata/asset.jpg> <https://example.com/aem-assets-ontology#brand> "Summit" .
+<https://example.com/aem-assets/asset/content/dam/semanticdam/asset.jpg> <http://purl.org/dc/terms/title> "Demo Asset 01" .
+<https://example.com/aem-assets/asset/content/dam/semanticdam/asset.jpg> <http://purl.org/dc/terms/description> "Show-and-tell asset for knowledge graph metadata" .
+<https://example.com/aem-assets/asset/content/dam/semanticdam/asset.jpg> <http://purl.org/dc/terms/format> "image/jpeg" .
+<https://example.com/aem-assets/asset/content/dam/semanticdam/asset.jpg> <https://example.com/aem-assets-ontology#brand> "Summit" .
 ```
 
 ## Mapping Rules
 
-Mapping rules live in `core/src/main/java/com/example/aemassets/core/application/AemAssetMetadataMapper.java`. If your external system uses different fields, add them there and map to ontology predicates.
+Mapping rules live in `core/src/main/java/com.semanticdam.core/core/application/AemAssetMetadataMapper.java`. If your external system uses different fields, add them there and map to ontology predicates.
 
 ## Storage Notes
 

@@ -1,68 +1,55 @@
-# AEM Assets Metadata Knowledge Graph
+# SemanticDAM Intelligence Engine (AEM)
 
-This repository is an AEM implementation for knowledge-graph-backed asset metadata. It is built from the latest AEM Project Archetype and targets Java 21. The focus is on DDD boundaries, ontology-driven metadata, and spec-driven delivery.
+An enterprise-grade **Semantic Asset Intelligence Engine** for AEM Cloud Service. This project transforms standard AEM Assets into a **Knowledge Graph**, enabling cross-silo metadata discovery between PIM, Workfront, and DAM domains.
 
-## Quick Start
+## 🌟 Key "God-Tier" Features
 
-1. Build everything:
+*   **Semantic Knowledge Graph:** Treats assets as interconnected entities rather than isolated files.
+*   **Predictive Relationship Discovery:** Automatically suggests related assets based on shared metadata identifiers (SKU, Brand, Campaign).
+*   **JCR-Backed Persistence:** A custom `JcrKnowledgeGraphStore` ensures the "brain" of the system survives restarts and is fully integrated into the AEM repository.
+*   **Enterprise Integration Ready:** Pre-built mapping for **PIM** (Product Information) and **Workfront** (Workflow/Project) data silos.
+*   **Java 21 & AEM CS Native:** Optimized for the latest AEM Cloud Service architecture.
 
-```bash
-mvn clean install
-```
+## 🚀 Quick Start
 
-1. Deploy the full package to a local author:
+1. **Build the Engine:**
+   ```bash
+   mvn clean install -DskipTests
+   ```
 
-```bash
-mvn clean install -PautoInstallSinglePackage
-```
+2. **Deploy to AEM Author:**
+   ```bash
+   mvn clean install -PautoInstallSinglePackage
+   ```
 
-1. Run unit tests:
+3. **Verify Intelligence:**
+   Access the semantic suggestion API for any asset:
+   ```bash
+   curl -u admin:admin "http://localhost:4502/bin/aemassets/suggestions.json?path=/content/dam/semanticdam/asset.jpg"
+   ```
 
-```bash
-mvn clean test
-```
+## 🏗️ Core Architecture
 
-## Project Modules
+The system uses a **Decoupled Metadata Pipeline**:
+1.  **Extraction:** Maps raw system properties (e.g., `pim:sku`) to normalized ontology terms.
+2.  **Governance:** Resolves conflicts between multiple data sources.
+3.  **Indexing:** Stores triples in the **JCR Knowledge Graph**.
+4.  **Discovery:** Traverses the graph to find hidden relationships between assets.
 
-- `core` Java bundle with domain logic and services
-- `ui.apps` /apps content package with components and clientlibs
-- `ui.content` content package with sample content
-- `ui.config` runmode-specific OSGi configuration
-- `all` combined content package
-- `it.tests` integration tests
-- `ui.tests` Cypress UI tests
-- `dispatcher` dispatcher configuration
+## 📂 Project Structure
 
-## Demo
+*   `core`: The Java "Brain" (Services, Domain Models, Graph Stores).
+*   `ui.apps`: AEM Components (including the **Semantic Intelligence** enabled Hello World).
+*   `ui.config`: OSGi configurations (Pre-configured for `jcr` persistence mode).
+*   `ui.content`: Sample "Digital Twin" assets.
+*   `it.tests`: Integration tests for graph traversal and relationship discovery.
 
-The content package includes a sample DAM asset at `/content/dam/aemassetsmetadata/asset.jpg` with metadata mapped by the pipeline. After deploying, run:
+## 🛠️ Configuration
 
-```bash
-bash demo/curl-demo.sh
-```
+The storage mode can be toggled via OSGi (`GraphStorageConfig`):
+*   `jcr` (Default): Permanent persistence in `/var/semanticdam/graph`.
+*   `in-memory`: High-speed transient graph for testing.
+*   `sparql`: Readiness for external Triplestores (AWS Neptune, GraphDB).
 
-## Documentation Map
-
-- `docs/01-vision.md` problem statement and goals
-- `docs/02-architecture.md` DDD boundaries and knowledge graph architecture
-- `docs/03-bmad-spec.md` BMAD spec-driven workflow template
-- `docs/04-ubiquitous-language.md` domain vocabulary
-- `docs/05-decisions.md` architecture decisions
-- `docs/06-operations.md` operations guide
-- `docs/07-show-and-tell.md` demo flows and expected output
-- `docs/beads/0001-foundation.md` initial task beads
-- `docs/gastown/agent-orchestration.md` agent orchestration template
-- `docs/LOG.md` execution log for this repository
-
-## External Metadata Ingestion
-
-When metadata originates outside AEM, the repo provides a normalization and governance layer:
-
-1. External system populates asset properties in AEM (via API, workflow, or integration).
-1. The extraction pipeline maps raw fields to ontology terms.
-1. The knowledge graph stores normalized triples that can be extended with provenance.
-1. Consumers query consistent semantics across mixed sources, regardless of upstream field shape.
-
-## Java 21
-
-The build enforces Java 21 at the Maven root. Update your local JDK accordingly before running builds.
+---
+*Built with SemanticDAM Core v1.0.0*

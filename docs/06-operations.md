@@ -5,13 +5,13 @@
 Create a service user mapping so the metadata source can read DAM metadata.
 
 - OSGi PID: `org.apache.sling.serviceusermapping.impl.ServiceUserMapperImpl.amended`
-- Subservice: `aemassetsmetadata`
+- Subservice: `semanticdam`
 - System user: `aem-assets-metadata-svc`
 
 Example entry:
 
 ```
-com.example.aemassets:aemassetsmetadata=aem-assets-metadata-svc
+com.semanticdam.core:semanticdam=aem-assets-metadata-svc
 ```
 
 ## ACLs
@@ -29,11 +29,11 @@ Grant read access to DAM paths:
 Example usage:
 
 ```
-curl -s "http://localhost:4502/bin/aemassets/metadata.json?path=/content/dam/aemassetsmetadata/asset.jpg"
+curl -s "http://localhost:4502/bin/aemassets/metadata.json?path=/content/dam/semanticdam/asset.jpg"
 ```
 
 ```
-curl -s "http://localhost:4502/bin/aemassets/metadata.ttl?path=/content/dam/aemassetsmetadata/asset.jpg"
+curl -s "http://localhost:4502/bin/aemassets/metadata.ttl?path=/content/dam/semanticdam/asset.jpg"
 ```
 
 The JSON response is the normalized, ontology-backed representation. Turtle output is suitable for graph tools.
@@ -53,7 +53,7 @@ When metadata is populated by external systems, store it under the asset metadat
 
 If the external system uses different field names, update the mapping rules in:
 
-`core/src/main/java/com/example/aemassets/core/application/AemAssetMetadataMapper.java`
+`core/src/main/java/com.semanticdam.core/core/application/AemAssetMetadataMapper.java`
 
 ## Change Detection
 
@@ -65,12 +65,12 @@ The in-memory graph store is for development only. Replace it with a persistent 
 
 ## Graph Storage Mode
 
-Configure `com.example.aemassets.core.graph.GraphStorageConfig`:
+Configure `com.semanticdam.core.core.graph.GraphStorageConfig`:
 
 - `in-memory` for local dev and tests.
 - `sparql` for external graph store.
 
-Configure `com.example.aemassets.core.graph.SparqlEndpointConfig` with endpoint URL and credentials when using SPARQL mode.
+Configure `com.semanticdam.core.core.graph.SparqlEndpointConfig` with endpoint URL and credentials when using SPARQL mode.
 
 ## SPARQL Readback Status
 

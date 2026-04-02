@@ -1,30 +1,39 @@
 @prefix aem: <https://example.com/aem-assets-ontology#> .
-@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
-@prefix schema: <http://schema.org/> .
-@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix dc: <http://purl.org/dc/terms/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 
-# Core asset concepts
+aem:AssetMetadata owl:Class ;
+    rdfs:label "Asset Metadata Record" .
 
-aem:Asset a schema:CreativeWork .
+aem:sku aem:Property ;
+    rdfs:label "SKU" ;
+    aem:pattern "^[A-Z0-9-]+$" ;
+    rdfs:comment "The unique product SKU associated with the asset." .
 
-aem:UsageRights a schema:CreativeWork .
+aem:brand aem:Property ;
+    rdfs:label "Brand" ;
+    aem:pattern "^[a-zA-Z\\s]+$" ;
+    rdfs:comment "The brand associated with the asset." .
 
-aem:Brand a schema:Organization .
+aem:pimCategory aem:Property ;
+    rdfs:label "PIM Category" ;
+    rdfs:comment "The category defined in the PIM system." .
 
-aem:hasUsageRights a rdf:Property ;
-  schema:domainIncludes aem:Asset ;
-  schema:rangeIncludes aem:UsageRights .
+aem:workfrontProjectId aem:Property ;
+    rdfs:label "Workfront Project ID" ;
+    aem:pattern "^[0-9a-f]{32}$" ;
+    rdfs:comment "The 32-character hex ID from Adobe Workfront." .
 
-aem:licensedBy a rdf:Property ;
-  schema:domainIncludes aem:Asset ;
-  schema:rangeIncludes schema:Organization .
+aem:belongsToCampaign aem:Property ;
+    rdfs:label "Campaign" ;
+    rdfs:comment "The marketing campaign this asset belongs to." .
 
-aem:assetChecksum a rdf:Property ;
-  schema:domainIncludes aem:Asset ;
-  schema:rangeIncludes xsd:string .
+dc:title aem:Property ;
+    rdfs:label "Title" .
 
-# Dublin Core alignment
+dc:description aem:Property ;
+    rdfs:label "Description" .
 
-aem:description a rdf:Property ;
-  schema:domainIncludes aem:Asset ;
-  schema:rangeIncludes schema:Text .
+dc:format aem:Property ;
+    rdfs:label "Mime Type" .

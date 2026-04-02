@@ -1,6 +1,6 @@
 # Execution Log
 
-- 2026-03-11 Generated AEM project using AEM Project Archetype 56 with appId `aemassetsmetadata` and groupId `com.example.aemassets`.
+- 2026-03-11 Generated AEM project using AEM Project Archetype 56 with appId `semanticdam` and groupId `com.semanticdam.core`.
 - 2026-03-11 Enforced Java 21 in the root Maven build.
 - 2026-03-11 Added domain model scaffolding for asset metadata and knowledge graph services.
 - 2026-03-11 Added initial ontology file in Turtle format under `core/src/main/resources/ontology`.

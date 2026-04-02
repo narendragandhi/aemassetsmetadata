@@ -1,73 +1,50 @@
-# Architecture
+# Architecture: Multi-Source Metadata Hub
 
-## Bounded Contexts
+This document defines the architectural patterns and components used to manage asset metadata across a distributed enterprise landscape (PIM, Workfront, AEM, AJO).
 
-- Asset Ingestion Context
-- Ontology Governance Context
-- Graph Storage Context
-- Discovery and Search Context
+## 1. High-Level Vision
+The architecture transforms AEM from a simple asset store into a **Semantic Metadata Hub**. Instead of storing disconnected strings, AEM manages a **Knowledge Graph** where every fact has a defined meaning (Ontology) and a clear origin (Provenance).
 
-## Domain Model Sketch
+## 2. Component Layers
 
-- AssetId value object for DAM asset paths.
-- AssetMetadata aggregate with MetadataStatement facts.
-- OntologyTerm for shared, reusable meaning.
+### A. Ingestion Layer (The Landing Zone)
+*   **Sources**: External systems like **PIM** and **Workfront** push data into AEM via standard APIs or Workflows.
+*   **Storage**: Raw data initially lands in JCR properties under `jcr:content/metadata` using system-specific namespaces (e.g., `pim:sku`, `workfront:projectID`).
+*   **Trigger**: The `AssetMetadataResourceChangeListener` detects these changes and initiates the normalization pipeline.
 
-## Knowledge Graph Stack
+### B. Normalization Layer (The Semantic Brain)
+*   **Mapper (`AemAssetMetadataMapper`)**: This core component acts as the "translator." It performs two critical functions:
+    1.  **Semantic Mapping**: Translates system-specific keys to canonical **Ontology Predicates** (e.g., `pim:sku` -> `aem:sku`).
+    2.  **Provenance Tagging**: Attaches a `source` attribute to every statement (e.g., "PIM", "Workfront", "AEM").
+*   **Ontology Registry**: A central store (based on `asset-ontology.ttl`) that defines the "Source of Truth" for what each metadata field means.
 
-- Ontology format: RDF/OWL in Turtle for portability.
-- Constraint validation: SHACL for future rule validation.
-- Query language: SPARQL for graph reads.
-- Storage options:
-  - External RDF store for scale.
-  - Local in-memory store for tests.
+### C. Knowledge Graph Layer (The Fact Store)
+*   **Domain Model**: Metadata is stored as `MetadataStatement` objects (Triples: Subject, Predicate, Object + Source).
+*   **Storage Adapter**: Decouples the domain logic from the physical database.
+    *   *In-Memory*: Used for rapid local development and testing.
+    *   *SPARQL (Future)*: Architected to target enterprise RDF stores (GraphDB, Stardog) for large-scale relationship queries.
 
-## AEM Integration Strategy
+### D. Consumption Layer (The Delivery Zone)
+*   **API Endpoints**: Normalized views are exposed via `/bin/aemassets/metadata.json` and `.ttl`.
+*   **Consumer (AJO)**: **Adobe Journey Optimizer** consumes the normalized JSON. Because the data is normalized, AJO can use a stable schema for personalization, regardless of which upstream system provided the data.
 
-- AEM asset metadata extraction is an application layer concern.
-- Domain objects remain storage-agnostic.
-- Graph storage is an infrastructure adapter that can target a specific backend.
+## 3. Data Flow: PIM/Workfront to AJO
 
-## External Metadata Ingestion
+1.  **PIM** updates `pim:sku` on an asset.
+2.  **Workfront** updates `workfront:campaignName` on the same asset.
+3.  **AEM Listener** triggers the `AssetMetadataPipelineService`.
+4.  **Mapper** creates two statements:
+    *   Fact A: `aem:sku` = "SUM-2026" (Source: PIM)
+    *   Fact B: `aem:belongsToCampaign` = "Summit 26" (Source: Workfront)
+5.  **Knowledge Graph** indexes these facts.
+6.  **AJO** calls the JSON API and receives a clean, unified record for its journey logic.
 
-External systems can populate asset properties in AEM (for example via API or workflow). The ingestion flow is:
+## 4. Provenance & Governance
+The inclusion of the `source` field in every statement allows for advanced governance:
+*   **Lineage**: Architects can audit exactly where a piece of data came from.
+*   **Trust Levels**: Future implementations can use the source to resolve conflicts (e.g., "If PIM and AEM disagree on a brand name, trust PIM").
 
-1. External system writes metadata to `/content/dam/.../jcr:content/metadata`.
-1. `SlingResourceAemMetadataSource` reads raw properties.
-1. `AemAssetMetadataMapper` normalizes and maps fields to ontology predicates.
-1. `AssetMetadataPipelineService` writes triples to the knowledge graph adapter.
-
-This keeps upstream variability isolated in the mapper while preserving a consistent graph shape.
-
-## DDD and TDD Alignment
-
-- Keep domain logic free of AEM APIs.
-- Use adapter layers to translate AEM metadata to domain objects.
-- Write tests at the domain and service boundary first, then implement adapters.
-
-## Extension Points
-
-- Mapping rules: `core/src/main/java/com/example/aemassets/core/application/AemAssetMetadataMapper.java`
-- Metadata extraction: `core/src/main/java/com/example/aemassets/core/aem/SlingResourceAemMetadataSource.java`
-- Graph storage adapter: `core/src/main/java/com/example/aemassets/core/graph/KnowledgeGraphService.java`
-- Export format: `core/src/main/java/com/example/aemassets/core/graph/GraphSerializer.java`
-
-## Service User Setup
-
-The Sling-based metadata source requires a service user mapping for the subservice `aemassetsmetadata` to read `/content/dam`. Configure `org.apache.sling.serviceusermapping.impl.ServiceUserMapperImpl.amended` with a system user that has read access to DAM metadata.
-
-## Graph Storage Strategy
-
-The current implementation uses an in-memory graph adapter for speed and testability. For production use, we will add a persistent adapter and select it via configuration.
-
-### Candidate Backends
-
-- RDF store (e.g., Apache Jena, GraphDB, Stardog) via SPARQL endpoints.
-- Property graph store (e.g., Neo4j) with a translation layer from triples.
-- AEM native storage using JCR nodes (least preferred for large-scale graph queries).
-
-### Migration Plan
-
-1. Implement a persistent adapter that implements `KnowledgeGraphService`.
-1. Add configuration to choose the adapter at runtime.
-1. Migrate the in-memory adapter to dev/test profiles only.
+## 5. EA Strategic Alignment
+*   **Decoupling**: Upstream schemas can change without breaking downstream consumers.
+*   **Interoperability**: Uses W3C standards (RDF, Turtle) for data portability.
+*   **Scalability**: The "Adapter" pattern allows for a seamless transition from JCR storage to a dedicated Graph Database.

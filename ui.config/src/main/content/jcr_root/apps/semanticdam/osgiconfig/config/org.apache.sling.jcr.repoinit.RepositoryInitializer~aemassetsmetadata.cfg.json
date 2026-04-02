@@ -1,0 +1,9 @@
+{
+    "scripts": [
+        "create path (sling:OrderedFolder) /content/dam/semanticdam",
+        "create path (nt:unstructured) /content/dam/semanticdam/jcr:content",
+        "set properties on /content/dam/semanticdam/jcr:content\n  set cq:conf{String} to /conf/semanticdam\n  set jcr:title{String} to \"AEM Assets Metadata\"\nend",
+        "create service user aem-assets-metadata-svc",
+        "set ACL for aem-assets-metadata-svc\n  allow jcr:read on /content/dam\nend"
+    ]
+}
