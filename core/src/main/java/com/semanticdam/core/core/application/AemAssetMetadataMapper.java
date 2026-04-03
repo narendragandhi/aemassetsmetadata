@@ -48,10 +48,18 @@ public class AemAssetMetadataMapper {
     private AssetMetadata addValidated(AssetMetadata metadata, String predicateUri, Object value, String source) {
         if (value instanceof String && !((String) value).isBlank()) {
             String val = (String) value;
-            MetadataStatement statement = MetadataStatement.literal(predicateUri, val, source, true);
+            double confidence = getSourceConfidence(source);
+            MetadataStatement statement = MetadataStatement.literal(predicateUri, val, source, true, confidence);
             boolean isValid = validator.isValid(statement);
-            return metadata.add(MetadataStatement.literal(predicateUri, val, source, isValid));
+            return metadata.add(MetadataStatement.literal(predicateUri, val, source, isValid, confidence));
         }
         return metadata;
+    }
+
+    private double getSourceConfidence(String source) {
+        if ("PIM".equalsIgnoreCase(source)) return 0.95;
+        if ("Workfront".equalsIgnoreCase(source)) return 0.85;
+        if ("AEM".equalsIgnoreCase(source)) return 0.75;
+        return 0.50;
     }
 }

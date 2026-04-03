@@ -35,10 +35,11 @@ public class JcrKnowledgeGraphStore implements KnowledgeGraphService {
             ModifiableValueMap mvm = resource.adaptTo(ModifiableValueMap.class);
             
             if (mvm != null) {
-                // Store metadata as a JSON-like structure or flat properties for simplicity
+                // Store metadata and its confidence score
                 for (MetadataStatement statement : metadata.statements()) {
                     String propName = encodePredicate(statement.predicateUri());
                     mvm.put(propName, statement.objectValue());
+                    mvm.put(propName + "_conf", statement.confidenceScore());
                 }
                 resolver.commit();
             }
@@ -57,9 +58,10 @@ public class JcrKnowledgeGraphStore implements KnowledgeGraphService {
             AssetMetadata metadata = AssetMetadata.empty(assetId);
             
             for (String key : vm.keySet()) {
-                if (key.contains("_at_")) { // Our encoded predicate marker
+                if (key.startsWith("p_at_") && !key.endsWith("_conf")) { // Our encoded predicate marker
                     String uri = decodePredicate(key);
-                    metadata = metadata.add(MetadataStatement.literal(uri, vm.get(key, String.class), "JCR-Graph", true));
+                    double confidence = vm.get(key + "_conf", 1.0);
+                    metadata = metadata.add(MetadataStatement.literal(uri, vm.get(key, String.class), "JCR-Graph", true, confidence));
                 }
             }
             return Optional.of(metadata);
