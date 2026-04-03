@@ -32,15 +32,15 @@ public class AemAssetMetadataMapper {
         result = addValidated(result, "http://purl.org/dc/terms/title", metadata.get("dc:title"), "AEM");
         result = addValidated(result, "http://purl.org/dc/terms/description", metadata.get("dc:description"), "AEM");
         result = addValidated(result, "http://purl.org/dc/terms/format", metadata.get("dc:format"), "AEM");
-        result = addValidated(result, "https://example.com/aem-assets-ontology#brand", metadata.get("aem:brand"), "AEM");
+        result = addValidated(result, "https://schema.org/brand", metadata.get("aem:brand"), "AEM");
 
-        // PIM Integration Mapping
-        result = addValidated(result, "https://example.com/aem-assets-ontology#sku", metadata.get("pim:sku"), "PIM");
-        result = addValidated(result, "https://example.com/aem-assets-ontology#pimCategory", metadata.get("pim:category"), "PIM");
+        // PIM Integration Mapping (SKOS & Schema.org)
+        result = addValidated(result, "https://schema.org/sku", metadata.get("pim:sku"), "PIM");
+        result = addValidated(result, "http://www.w3.org/2004/02/skos/core#prefLabel", metadata.get("pim:category"), "PIM");
 
-        // Workfront Integration Mapping
-        result = addValidated(result, "https://example.com/aem-assets-ontology#workfrontProjectId", metadata.get("workfront:projectID"), "Workfront");
-        result = addValidated(result, "https://example.com/aem-assets-ontology#belongsToCampaign", metadata.get("workfront:campaignName"), "Workfront");
+        // Workfront Integration Mapping (Custom but structured)
+        result = addValidated(result, "https://semanticdam.com/ontology/workfront#projectId", metadata.get("workfront:projectID"), "Workfront");
+        result = addValidated(result, "https://semanticdam.com/ontology/workfront#campaignName", metadata.get("workfront:campaignName"), "Workfront");
 
         return result;
     }
