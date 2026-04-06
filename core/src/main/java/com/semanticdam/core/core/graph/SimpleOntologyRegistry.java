@@ -136,4 +136,24 @@ public class SimpleOntologyRegistry implements OntologyRegistry {
     private String normalizeLabel(String label) {
         return label.trim().toLowerCase(Locale.ROOT);
     }
+
+    @Override
+    public boolean isAllowedForBundle(String predicateUri, String bundleName) {
+        // Implementation of Drupal-style "Entity Bundles"
+        if ("ProductImage".equalsIgnoreCase(bundleName)) {
+            return java.util.Set.of(
+                "http://purl.org/dc/terms/title",
+                "http://purl.org/dc/terms/description",
+                "http://purl.org/dc/terms/format",
+                "https://schema.org/brand",
+                "https://schema.org/sku",
+                "http://www.w3.org/2004/02/skos/core#prefLabel",
+                "https://schema.org/contentLocation",
+                "https://semanticdam.com/ontology/strategy#priority",
+                "https://semanticdam.com/ontology/workfront#projectId",
+                "https://semanticdam.com/ontology/workfront#campaignName"
+            ).contains(predicateUri);
+        }
+        return true; // Default to open for other bundles for now
+    }
 }
