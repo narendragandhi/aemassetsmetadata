@@ -53,6 +53,10 @@ public final class MetadataStatement {
         return new MetadataStatement(predicateUri, literalValue, false, source, isValid, confidenceScore);
     }
 
+    public static MetadataStatement uri(String predicateUri, String objectUri, String source, boolean isValid, double confidenceScore) {
+        return new MetadataStatement(predicateUri, objectUri, true, source, isValid, confidenceScore);
+    }
+
     public String predicateUri() {
         return predicateUri;
     }

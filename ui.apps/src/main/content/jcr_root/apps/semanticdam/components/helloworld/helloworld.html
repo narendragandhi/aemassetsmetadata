@@ -22,5 +22,6 @@
     <div class="cmp-helloworld__item" data-sly-use.model="com.semanticdam.core.core.models.HelloWorldModel" data-sly-test="${model.message}">
         <p class="cmp-helloworld__item-label">Model message:</p>
         <pre class="cmp-helloworld__item-output"data-cmp-hook-helloworld="model">${model.message}</pre>
+        <div data-sly-test="${model.seoScript}" data-sly-text="${model.seoScript @ context='unsafe'}"></div>
     </div>
 </div>

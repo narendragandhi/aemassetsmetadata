@@ -42,16 +42,21 @@ public class HelloWorldModel {
     @OSGiService
     private KnowledgeGraphService knowledgeGraphService;
 
+    @OSGiService
+    private com.semanticdam.core.core.application.SemanticSeoService seoService;
+
     @ValueMapValue(name=PROPERTY_RESOURCE_TYPE, injectionStrategy=InjectionStrategy.OPTIONAL)
     @Default(values="No resourceType")
     protected String resourceType;
 
     @SlingObject
     private Resource currentResource;
+
     @SlingObject
     private ResourceResolver resourceResolver;
 
     private String message;
+    private String seoScript;
 
     @PostConstruct
     protected void init() {
@@ -62,7 +67,9 @@ public class HelloWorldModel {
 
         int suggestionCount = 0;
         if (currentResource.getPath().startsWith("/content/dam")) {
-            suggestionCount = knowledgeGraphService.findRelated(AssetId.of(currentResource.getPath())).size();
+            String assetPath = currentResource.getPath();
+            suggestionCount = knowledgeGraphService.findRelated(AssetId.of(assetPath)).size();
+            seoScript = seoService.getJsonLd(assetPath);
         }
 
         message = "Hello World!\n"
@@ -73,6 +80,10 @@ public class HelloWorldModel {
 
     public String getMessage() {
         return message;
+    }
+
+    public String getSeoScript() {
+        return seoScript;
     }
 
 }
