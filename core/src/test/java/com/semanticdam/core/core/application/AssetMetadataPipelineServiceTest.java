@@ -28,8 +28,10 @@ class AssetMetadataPipelineServiceTest {
         AssetMetadataExtractionService extractionService = new AssetMetadataExtractionService(new AemAssetMetadataMapper(validator));
         InMemoryKnowledgeGraphStore store = new InMemoryKnowledgeGraphStore();
         AssetMetadataIndexingService indexingService = new AssetMetadataIndexingService(store);
+        InferenceService inferenceService = Mockito.mock(InferenceService.class);
+        Mockito.when(inferenceService.applyInferences(any())).thenAnswer(i -> i.getArguments()[0]);
 
-        AssetMetadataPipelineService pipeline = new AssetMetadataPipelineService(source, extractionService, indexingService);
+        AssetMetadataPipelineService pipeline = new AssetMetadataPipelineService(source, extractionService, indexingService, inferenceService);
         AssetMetadata metadata = pipeline.ingest(assetId);
 
         assertEquals(3, metadata.statements().size());

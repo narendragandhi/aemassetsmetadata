@@ -7,11 +7,13 @@ public class AssetMetadataPipelineService {
     private final AemMetadataSource metadataSource;
     private final AssetMetadataExtractionService extractionService;
     private final AssetMetadataIndexingService indexingService;
+    private final InferenceService inferenceService;
 
     public AssetMetadataPipelineService(
             AemMetadataSource metadataSource,
             AssetMetadataExtractionService extractionService,
-            AssetMetadataIndexingService indexingService) {
+            AssetMetadataIndexingService indexingService,
+            InferenceService inferenceService) {
         if (metadataSource == null) {
             throw new IllegalArgumentException("metadataSource must be provided");
         }
@@ -24,10 +26,13 @@ public class AssetMetadataPipelineService {
         this.metadataSource = metadataSource;
         this.extractionService = extractionService;
         this.indexingService = indexingService;
+        this.inferenceService = inferenceService;
     }
 
     public AssetMetadata ingest(AssetId assetId) {
         AssetMetadata metadata = extractionService.extract(assetId, metadataSource.readMetadata(assetId));
+        // Strategic Intelligence: Derive new facts before indexing
+        metadata = inferenceService.applyInferences(metadata);
         indexingService.index(metadata);
         return metadata;
     }
