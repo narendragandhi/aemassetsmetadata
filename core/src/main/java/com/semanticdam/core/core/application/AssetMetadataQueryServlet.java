@@ -33,7 +33,7 @@ public class AssetMetadataQueryServlet extends SlingSafeMethodsServlet {
         String assetPath = request.getParameter("path");
         boolean resolved = Boolean.parseBoolean(request.getParameter("resolved"));
 
-        if (assetPath == null || assetPath.isBlank()) {
+        if (!isDamPath(assetPath)) {
             response.sendError(SlingHttpServletResponse.SC_BAD_REQUEST, "Missing path parameter");
             return;
         }
@@ -46,7 +46,12 @@ public class AssetMetadataQueryServlet extends SlingSafeMethodsServlet {
 
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
+        response.setHeader("Cache-Control", "no-store");
         response.getWriter().write(toJson(metadata.get(), resolved));
+    }
+
+    private boolean isDamPath(String path) {
+        return path != null && path.startsWith("/content/dam/") && !path.contains("/../") && !path.endsWith("/..");
     }
 
     private String toJson(AssetMetadata metadata, boolean resolved) {

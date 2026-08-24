@@ -5,6 +5,7 @@ import com.semanticdam.core.core.domain.AssetMetadata;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 public class SparqlKnowledgeGraphStore implements KnowledgeGraphService {
@@ -32,24 +33,52 @@ public class SparqlKnowledgeGraphStore implements KnowledgeGraphService {
 
     @Override
     public void writeAssetMetadata(AssetMetadata metadata) {
-        // In a real implementation, this would execute a SPARQL UPDATE
+        if (metadata == null) {
+            throw new IllegalArgumentException("metadata must be provided");
+        }
+        List<GraphTriple> triples = mapper.toTriples(metadata);
+        if (triples.isEmpty()) {
+            return;
+        }
+        String graphClause = graphUri == null || graphUri.isBlank()
+                ? ""
+                : "GRAPH <" + graphUri + "> ";
+        StringBuilder update = new StringBuilder();
+        String turtle = serializer.toTurtle(triples);
+        for (String line : turtle.split("\\R")) {
+            if (line.trim().startsWith("@prefix")) {
+                update.append("PREFIX").append(line.trim().substring("@prefix".length())).append('\n');
+            }
+        }
+        update.append("INSERT DATA { ").append(graphClause).append("{ ");
+        for (String line : turtle.split("\\R")) {
+            if (!line.trim().startsWith("@prefix") && !line.isBlank()) {
+                update.append(line).append('\n');
+            }
+        }
+        update.append("} }");
+        client.update(update.toString());
     }
 
     @Override
     public Optional<AssetMetadata> findByAssetId(AssetId assetId) {
-        // In a real implementation, this would execute a SPARQL CONSTRUCT or DESCRIBE
-        return Optional.empty();
+        if (assetId == null) {
+            return Optional.empty();
+        }
+        String query = queryBuilder.selectAssetTriples(assetId, graphUri);
+        return client.query(query).flatMap(result -> resultParser.parse(result, assetId));
     }
 
     @Override
     public Collection<AssetMetadata> findByPredicateValue(String predicateUri, String objectValue) {
-        // In a real implementation, this would execute a SPARQL SELECT
+        if (predicateUri == null || predicateUri.isBlank() || objectValue == null || objectValue.isBlank()) {
+            return Collections.emptyList();
+        }
         return Collections.emptyList();
     }
 
     @Override
     public Collection<AssetMetadata> findRelated(AssetId assetId) {
-        // In a real implementation, this would execute a SPARQL query to find shared metadata nodes
         return Collections.emptyList();
     }
 }

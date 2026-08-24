@@ -77,6 +77,8 @@ public class SimpleOntologyRegistry implements OntologyRegistry {
                     OntologyTerm term = new OntologyTerm(uri, label, pattern);
                     byUri.put(uri, term);
                     byLabel.put(normalizeLabel(label), term);
+                    // Keep the compact ontology name discoverable as well as its human label.
+                    byLabel.putIfAbsent(normalizeLabel(labelFromSubject(subject)), term);
                 }
             }
         }
@@ -128,8 +130,20 @@ public class SimpleOntologyRegistry implements OntologyRegistry {
     }
 
     private String stripComment(String line) {
-        int idx = line.indexOf('#');
-        if (idx >= 0) return line.substring(0, idx);
+        boolean inLiteral = false;
+        boolean inUri = false;
+        for (int i = 0; i < line.length(); i++) {
+            char current = line.charAt(i);
+            if (current == '"' && (i == 0 || line.charAt(i - 1) != '\\')) {
+                inLiteral = !inLiteral;
+            } else if (current == '<' && !inLiteral) {
+                inUri = true;
+            } else if (current == '>' && !inLiteral) {
+                inUri = false;
+            } else if (current == '#' && !inLiteral && !inUri) {
+                return line.substring(0, i);
+            }
+        }
         return line;
     }
 

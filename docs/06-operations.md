@@ -23,6 +23,8 @@ Grant read access to DAM paths:
 
 ## Endpoints
 
+These endpoints are intended for an authenticated author/demo environment. Do not expose them through a public dispatcher farm until authorization, filtering, and cache policy have been reviewed.
+
 - `GET /bin/aemassets/metadata.json?path=/content/dam/...`
 - `GET /bin/aemassets/metadata.ttl?path=/content/dam/...`
 
@@ -61,7 +63,7 @@ If the external system uses different field names, update the mapping rules in:
 
 ## Notes
 
-The in-memory graph store is for development only. Replace it with a persistent graph adapter for production.
+The in-memory graph store is for development and tests only. The JCR adapter is the verified persistent reference path. It stores each statement as a child node so duplicate predicates and provenance fields are retained.
 
 ## Graph Storage Mode
 
@@ -74,4 +76,4 @@ Configure `com.semanticdam.core.core.graph.SparqlEndpointConfig` with endpoint U
 
 ## SPARQL Readback Status
 
-The SPARQL adapter can write triples and perform a query, but result parsing is stubbed. Implement a real `SparqlResultParser` before relying on query responses in production.
+The SPARQL adapter can write triples and build an asset read query, but result parsing, predicate search, and related-asset traversal are experimental. Implement and integration-test a real `SparqlResultParser` against the selected triplestore before enabling `sparql` mode in production.

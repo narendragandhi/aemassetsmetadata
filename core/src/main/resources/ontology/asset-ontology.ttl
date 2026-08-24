@@ -3,7 +3,11 @@
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 
+aem:Asset owl:Class ;
+    rdfs:label "Asset" .
+
 aem:AssetMetadata owl:Class ;
+    rdfs:subClassOf aem:Asset ;
     rdfs:label "Asset Metadata Record" .
 
 aem:sku aem:Property ;

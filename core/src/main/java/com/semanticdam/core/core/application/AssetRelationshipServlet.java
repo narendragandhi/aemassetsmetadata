@@ -54,6 +54,7 @@ public class AssetRelationshipServlet extends SlingSafeMethodsServlet {
 
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
+        response.setHeader("Cache-Control", "no-store");
         response.getWriter().write(toJson(results));
     }
 

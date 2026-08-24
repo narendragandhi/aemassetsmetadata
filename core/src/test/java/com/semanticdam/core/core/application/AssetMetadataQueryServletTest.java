@@ -41,6 +41,18 @@ class AssetMetadataQueryServletTest {
         assertTrue(response.getOutputAsString().contains("Hero"));
     }
 
+    @Test
+    void rejectsPathsOutsideDam(AemContext context) throws Exception {
+        AssetMetadataQueryServlet servlet = new AssetMetadataQueryServlet();
+        MockSlingHttpServletRequest request = context.request();
+        request.setParameterMap(java.util.Map.of("path", new String[]{"/content/site/page"}));
+        MockSlingHttpServletResponse response = context.response();
+
+        servlet.doGet(request, response);
+
+        assertEquals(400, response.getStatus());
+    }
+
     private static void inject(Object target, String fieldName, Object value) throws Exception {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);

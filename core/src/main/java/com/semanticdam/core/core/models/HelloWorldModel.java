@@ -39,10 +39,10 @@ import java.util.Optional;
 @Model(adaptables = Resource.class)
 public class HelloWorldModel {
 
-    @OSGiService
+    @OSGiService(injectionStrategy = InjectionStrategy.OPTIONAL)
     private KnowledgeGraphService knowledgeGraphService;
 
-    @OSGiService
+    @OSGiService(injectionStrategy = InjectionStrategy.OPTIONAL)
     private com.semanticdam.core.core.application.SemanticSeoService seoService;
 
     @ValueMapValue(name=PROPERTY_RESOURCE_TYPE, injectionStrategy=InjectionStrategy.OPTIONAL)
@@ -68,8 +68,12 @@ public class HelloWorldModel {
         int suggestionCount = 0;
         if (currentResource.getPath().startsWith("/content/dam")) {
             String assetPath = currentResource.getPath();
-            suggestionCount = knowledgeGraphService.findRelated(AssetId.of(assetPath)).size();
-            seoScript = seoService.getJsonLd(assetPath);
+            if (knowledgeGraphService != null) {
+                suggestionCount = knowledgeGraphService.findRelated(AssetId.of(assetPath)).size();
+            }
+            if (seoService != null) {
+                seoScript = seoService.getJsonLd(assetPath);
+            }
         }
 
         message = "Hello World!\n"

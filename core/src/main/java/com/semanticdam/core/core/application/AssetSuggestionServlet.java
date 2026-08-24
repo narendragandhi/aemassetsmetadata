@@ -30,7 +30,7 @@ public class AssetSuggestionServlet extends SlingSafeMethodsServlet {
     @Override
     protected void doGet(SlingHttpServletRequest request, SlingHttpServletResponse response) throws IOException {
         String path = request.getParameter("path");
-        if (path == null || path.isBlank()) {
+        if (!isDamPath(path)) {
             response.sendError(SlingHttpServletResponse.SC_BAD_REQUEST, "Missing asset path");
             return;
         }
@@ -39,7 +39,12 @@ public class AssetSuggestionServlet extends SlingSafeMethodsServlet {
 
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
+        response.setHeader("Cache-Control", "no-store");
         response.getWriter().write(toJson(related));
+    }
+
+    private boolean isDamPath(String path) {
+        return path != null && path.startsWith("/content/dam/") && !path.contains("/../") && !path.endsWith("/..");
     }
 
     private String toJson(Collection<AssetMetadata> related) {
