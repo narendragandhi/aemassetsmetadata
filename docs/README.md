@@ -1,5 +1,6 @@
 # Documentation Index
 
+- `PRD.md` — product requirements and production acceptance criteria
 - `01-vision.md`
 - `02-architecture.md`
 - `03-bmad-spec.md`

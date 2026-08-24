@@ -91,6 +91,6 @@ public class AssetRelationshipServlet extends SlingSafeMethodsServlet {
     }
 
     private String escape(String value) {
-        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+        return JsonEscaper.escape(value);
     }
 }
