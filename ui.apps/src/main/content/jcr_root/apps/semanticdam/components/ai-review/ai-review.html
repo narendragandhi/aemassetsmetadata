@@ -1,0 +1,16 @@
+<sly data-sly-use.clientlib="core/wcm/components/commons/v1/templates/clientlib.html">
+    <sly data-sly-call="${clientlib.all @ categories='semanticdam.ai-review'}"/>
+</sly>
+<section class="semanticdam-ai-review" data-asset-path="${properties.assetPath @ context='attribute'}">
+    <header class="semanticdam-ai-review__header">
+        <div><h2>AI metadata review</h2><p>Propose facts, verify evidence, and publish only approved metadata.</p></div>
+        <button class="coral3-Button coral3-Button--primary" data-ai-action="propose" type="button">Generate proposals</button>
+    </header>
+    <p class="semanticdam-ai-review__status" role="status" aria-live="polite">Choose “Generate proposals” to begin.</p>
+    <div class="semanticdam-ai-review__table-wrap">
+        <table class="coral3-Table coral3-Table--compact" data-ai-table>
+            <thead><tr><th>Fact</th><th>Confidence</th><th>Evidence</th><th>Status</th><th>Decision</th></tr></thead>
+            <tbody><tr><td colspan="5">No proposals loaded.</td></tr></tbody>
+        </table>
+    </div>
+</section>

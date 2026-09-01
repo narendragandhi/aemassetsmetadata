@@ -117,6 +117,143 @@ Uses normalized asset facts for site rendering, campaign selection, personalizat
 8. A failed indexing operation must be observable and retryable.
 9. Schema changes require compatibility and migration consideration.
 
+## 6A. Reproducible implementation brief for coding agents
+
+This section is an executable handoff for an agent rebuilding the repository
+from scratch. It is deliberately more precise than a product narrative.
+
+### 6A.1 Build assumptions
+
+- Java 21 and Maven are required.
+- The AEM module is `core`; package names start with
+  `com.semanticdam.core.core`.
+- Domain objects are immutable where practical and reject null/blank required
+  values with `IllegalArgumentException`.
+- Run focused tests with:
+
+```bash
+cd aemassetsmetadata
+mvn -B -pl core test
+```
+
+- Run the complete package verification with:
+
+```bash
+NPM_CONFIG_CACHE=/tmp/aemassetsmetadata-npm-cache \
+  npm_config_cache=/tmp/aemassetsmetadata-npm-cache \
+  mvn -B package -DskipTests
+```
+
+Do not require network model access or a running AI provider for unit tests.
+
+### 6A.2 Required implementation order
+
+1. Implement `AssetId`, `MetadataStatement`, and `AssetMetadata` first.
+2. Implement `KnowledgeGraphService` and its in-memory test adapter.
+3. Implement source mapping, validation, conflict resolution, and the JCR
+   persistence adapter.
+4. Add read-only JSON/Turtle endpoints with path validation and no-store
+   caching for authenticated metadata responses.
+5. Add `GroundedAssetContext`, `AiEnrichmentProvider`, and
+   `AiEnrichmentProposal`. Providers may propose only; approval applies facts.
+6. Add `AiEnrichmentPolicy`, `AiProposalStore`, and
+   `AiProposalReviewService` so proposal limits, predicate allowlists,
+   confidence thresholds, decisions, and audit events are testable without a
+   model or AEM instance.
+7. Add `OpenAiCompatibleEnrichmentProvider` as the first real HTTP adapter;
+   require strict JSON output, bounded timeouts, bearer-token configuration,
+   and fail-closed behavior. Add `AiEnrichmentProviderRegistry` so provider
+   selection is explicit and independent of OSGi ranking.
+8. Add `EmbeddingVector`, including required model id/version metadata,
+   `EmbeddingProvider`, `VectorSearchIndex`, and `VectorMatch`.
+9. Add `InMemoryVectorSearchIndex` using cosine similarity, deterministic
+   path tie-breaking, upsert replacement, removal, positive `limit`, finite
+   values, and dimension mismatch exclusion.
+10. Add `HybridAssetRetriever`: obtain the query embedding, search the vector
+   index, add exact graph-filter matches, apply a documented `0.25` graph
+   boost, deduplicate by `AssetId`, sort by score descending then path, and
+   truncate to `limit`.
+11. Add tests for every invariant below before adding external providers.
+12. Add `GovernedAiEnrichmentWorkflow` and its AEM JSON actions. `propose`
+    persists `PROPOSED` records only; `review` requires an authenticated actor,
+    persists the decision, and projects only approved facts into the graph.
+    Keep GET read-only and expose proposal state for a steward UI.
+
+### 6A.3 Source-of-truth file map
+
+| Capability | Required files |
+|---|---|
+| asset identity and facts | `core/.../domain/AssetId.java`, `MetadataStatement.java`, `AssetMetadata.java` |
+| graph contract | `core/.../graph/KnowledgeGraphService.java` |
+| durable repository | `core/.../graph/JcrKnowledgeGraphStore.java` |
+| AI proposal boundary | `core/.../domain/GroundedAssetContext.java`, `AiEnrichmentProposal.java`, `core/.../application/AiEnrichmentProvider.java`, `AiEnrichmentReviewService.java` |
+| AI governance | `core/.../application/AiEnrichmentPolicy.java`, `AiProposalStore.java`, `JcrAiProposalStore.java`, `AiProposalReviewService.java`, `AiProposalAuditEvent.java` |
+| governed workflow | `core/.../application/GovernedAiEnrichmentWorkflow.java`, `GovernedAiEnrichmentWorkflowComponent.java`, `AiProposalGenerateServlet.java`, `AiProposalQueryServlet.java`, `AiProposalReviewServlet.java` |
+| provider integration | `core/.../application/OpenAiCompatibleEnrichmentProvider.java`, `OpenAiCompatibleProviderConfig.java`, `OpenAiCompatibleProviderComponent.java`, `AiEnrichmentProviderRegistry.java` |
+| resilience and telemetry | `core/.../application/ResilientAiEnrichmentProvider.java`, `TokenBucketRateLimiter.java`, `SimpleCircuitBreaker.java`, `ProviderTelemetry.java` |
+| vector backend | `core/.../application/QdrantVectorSearchIndex.java`, `infra/docker-compose.vector.yml` |
+| contextual content variables | `core/.../contextvars/ContextualContentVariableService.java`, `ContextualContentVariableFilter.java`, `PagePropertiesProvider.java` |
+| author review UI | `ui.apps/.../components/ai-review/ai-review.html`, `ui.apps/.../clientlibs/clientlib-ai-review/ai-review.js` |
+| embedding contract | `core/.../domain/EmbeddingVector.java`, `core/.../application/EmbeddingProvider.java` |
+| vector contract | `core/.../application/VectorSearchIndex.java`, `VectorMatch.java` |
+| reference retrieval | `core/.../application/InMemoryVectorSearchIndex.java`, `HybridAssetRetriever.java`, `HybridRetrievalResult.java` |
+| reproducible verification | `scripts/verify-aem-sdk.sh`, `docs/08-ai-readiness.md` |
+
+### 6A.4 Acceptance tests for the retrieval slice
+
+The implementation is incomplete unless these assertions pass:
+
+- an empty, null, non-finite, or model-less embedding is rejected;
+- a vector query with a non-positive limit is rejected;
+- cosine-nearest assets rank first;
+- equal scores sort by asset path, making results deterministic;
+- upsert replaces the prior embedding for the same asset;
+- remove prevents an asset from appearing in future results;
+- incompatible vector dimensions do not crash a query or produce a match;
+- incompatible embedding model ids or versions do not produce a match;
+- a graph match and vector match appear once, not twice;
+- graph matching adds exactly `0.25` to the reference hybrid score;
+- hybrid results sort deterministically and honor the requested limit;
+- proposal policy rejects excess, low-confidence, and non-allowlisted facts;
+- proposal review persists the decision and audit actor/time/reason without
+  applying metadata automatically;
+- no test calls an external model, vector database, or network endpoint.
+- proposal generation is POST-only and stores no graph fact;
+- rejection stores a durable decision and leaves graph metadata unchanged;
+- approval stores the decision and writes exactly the approved statement;
+- review cannot use an anonymous actor or an empty reason;
+- proposal persistence replaces a decision by stable proposal identity rather
+  than leaving a stale `PROPOSED` copy visible.
+
+### 6A.5 Production replacement boundary
+
+`InMemoryVectorSearchIndex` is intentionally not production-ready. The
+repository includes a Qdrant adapter, but production teams must still provide
+TLS, authentication, backups, capacity planning, and availability validation.
+Replace or operate the adapter behind `VectorSearchIndex` with durable storage,
+tenant/ACL filtering, model and dimension validation, batch upsert, deletion,
+re-embedding, index health, timeout behavior, and observability. Keep the
+application-level contracts and invariant tests unchanged. A production
+embedding provider must likewise remain behind `EmbeddingProvider`, record
+model/version/request provenance, enforce payload and timeout limits, and fail
+closed without writing authoritative metadata.
+
+### 6A.6 AEM runtime wiring
+
+The live adapters are deliberately not enabled by a checked-in credential
+file. Deployments provide the following OSGi configurations through protected
+environment configuration:
+
+- `com.semanticdam.core.core.application.OpenAiCompatibleProviderConfig`;
+- `com.semanticdam.core.core.application.QdrantVectorIndexConfig`.
+
+Both components use `configurationPolicy=REQUIRE`. The OpenAI-compatible
+component also requires `enabled=true`; without it, no provider service can
+make a model request. The Qdrant component requires a model id/version and
+expects a pre-created collection with the matching vector size and cosine
+distance. This is a deployment prerequisite, not a package-install side
+effect.
+
 ## 7. Information architecture
 
 ### 7.1 Core concepts

@@ -1,15 +1,21 @@
 package com.semanticdam.core.core.graph;
 
 import com.semanticdam.core.core.domain.OntologyTerm;
+import org.osgi.service.component.annotations.Component;
 
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
+@Component(service = OntologyRegistry.class)
 public class SimpleOntologyRegistry implements OntologyRegistry {
     private final Map<String, OntologyTerm> byUri = new HashMap<>();
     private final Map<String, OntologyTerm> byLabel = new HashMap<>();
+
+    public SimpleOntologyRegistry() {
+        this(new ClasspathOntologySource("/ontology/asset-ontology.ttl"));
+    }
 
     public SimpleOntologyRegistry(OntologySource source) {
         if (source == null) {

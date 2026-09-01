@@ -1,0 +1,8 @@
+.semanticdam-ai-review { padding: 1.5rem; background: #fff; border: 1px solid #d5d9e0; }
+.semanticdam-ai-review__header { display: flex; justify-content: space-between; align-items: start; gap: 1rem; }
+.semanticdam-ai-review__header h2 { margin: 0; }
+.semanticdam-ai-review__status { color: #505a66; }
+.semanticdam-ai-review__table-wrap { overflow-x: auto; }
+.semanticdam-ai-review table { width: 100%; }
+.semanticdam-ai-review textarea { display: block; width: 100%; margin-bottom: .5rem; }
+.semanticdam-ai-review td, .semanticdam-ai-review th { vertical-align: top; padding: .75rem; }
