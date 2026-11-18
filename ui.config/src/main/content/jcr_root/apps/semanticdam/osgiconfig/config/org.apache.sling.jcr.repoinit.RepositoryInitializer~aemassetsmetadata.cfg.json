@@ -1,12 +1,18 @@
 {
     "scripts": [
+        "register namespace (semanticdam) https://semanticdam.com/jcr/1.0",
         "create path (sling:OrderedFolder) /content/dam/semanticdam",
         "create path (nt:unstructured) /content/dam/semanticdam/jcr:content",
         "set properties on /content/dam/semanticdam/jcr:content\n  set cq:conf{String} to /conf/semanticdam\n  set jcr:title{String} to \"AEM Assets Metadata\"\nend",
         "create service user aem-assets-metadata-svc",
-        "set ACL for aem-assets-metadata-svc\n  allow jcr:read on /content/dam\nend",
         "create path (nt:unstructured) /var/semanticdam/graph",
         "create path (nt:unstructured) /var/semanticdam/proposals",
-        "set ACL for aem-assets-metadata-svc\n  allow jcr:read,jcr:write on /var/semanticdam/graph\n  allow jcr:read,jcr:write on /var/semanticdam/proposals\nend"
+        "create path (sling:Folder) /var/semanticdam/entities",
+        "create path (sling:Folder) /conf/semanticdam/settings/ontology",
+        "set ACL for aem-assets-metadata-svc\n  allow jcr:read on /content/dam\n  allow jcr:read on /content/cq:tags\n  allow jcr:read on /conf/semanticdam/settings/ontology\n  allow jcr:read,jcr:write,jcr:nodeTypeManagement on /var/semanticdam/graph\n  allow jcr:read,jcr:write,jcr:nodeTypeManagement on /var/semanticdam/entities\n  allow jcr:read,jcr:write,jcr:nodeTypeManagement on /var/semanticdam/proposals\nend",
+        "set ACL for aem-assets-metadata-svc\n  allow jcr:modifyProperties on /content/dam restriction(rep:glob,*/jcr:content/metadata/semanticdam:*)\nend",
+        "create group semanticdam-vocabulary-stewards",
+        "create service user semanticdam-invalidation-svc",
+        "set ACL for semanticdam-invalidation-svc\n  allow jcr:read,crx:replicate on /content\nend"
     ]
 }

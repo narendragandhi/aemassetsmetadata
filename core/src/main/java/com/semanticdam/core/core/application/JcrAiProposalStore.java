@@ -6,6 +6,7 @@ import com.semanticdam.core.core.domain.MetadataStatement;
 import org.apache.sling.api.resource.LoginException;
 import org.apache.sling.api.resource.ModifiableValueMap;
 import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.PersistenceException;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.api.resource.ResourceUtil;
@@ -31,7 +32,7 @@ public final class JcrAiProposalStore implements AiProposalStore {
 
     @Activate
     public JcrAiProposalStore(@Reference ResourceResolverFactory resolverFactory) {
-        this(resolverFactory, "aem-assets-metadata-svc");
+        this(resolverFactory, com.semanticdam.core.core.graph.JcrKnowledgeGraphStore.SERVICE_USER);
     }
 
     JcrAiProposalStore(ResourceResolverFactory resolverFactory, String serviceUser) {
@@ -112,9 +113,60 @@ public final class JcrAiProposalStore implements AiProposalStore {
                 result.add(proposal);
             }
             return List.copyOf(result);
-        } catch (Exception e) {
-            LOG.error("Failed to read AI proposals for {}", assetId.path(), e);
-            return List.of();
+        } catch (LoginException | RuntimeException e) {
+            // An unreadable store must not look like "no proposals": that would allow re-proposing.
+            throw new IllegalStateException("failed to read AI proposals for " + assetId.path(), e);
+        }
+    }
+
+    @Override
+    public void recordAudit(AiProposalAuditEvent event, AiEnrichmentProposal proposal) {
+        if (event == null || proposal == null) {
+            throw new IllegalArgumentException("event and proposal must be provided");
+        }
+        try (ResourceResolver resolver = getResolver()) {
+            Resource auditRoot = ResourceUtil.getOrCreateResource(resolver,
+                    ROOT + event.assetId().path() + "/audit", "nt:unstructured", "nt:unstructured", false);
+            Map<String, Object> values = new HashMap<>();
+            values.put("status", event.status().name());
+            values.put("actor", event.actor());
+            values.put("occurredAt", event.occurredAt().toString());
+            values.put("reason", event.reason());
+            values.put("predicate", proposal.statement().predicateUri());
+            values.put("object", proposal.statement().objectValue());
+            values.put("modelId", proposal.modelId());
+            values.put("promptVersion", proposal.promptVersion());
+            resolver.create(auditRoot, ResourceUtil.createUniqueChildName(auditRoot,
+                    "event-" + event.occurredAt().toEpochMilli()), values);
+            resolver.commit();
+        } catch (LoginException | PersistenceException | RuntimeException e) {
+            throw new IllegalStateException("failed to record AI review audit event", e);
+        }
+    }
+
+    @Override
+    public List<AiProposalAuditEvent> auditTrail(AssetId assetId) {
+        if (assetId == null) {
+            throw new IllegalArgumentException("assetId must be provided");
+        }
+        try (ResourceResolver resolver = getResolver()) {
+            Resource auditRoot = resolver.getResource(ROOT + assetId.path() + "/audit");
+            if (auditRoot == null) {
+                return List.of();
+            }
+            List<AiProposalAuditEvent> events = new ArrayList<>();
+            for (Resource resource : auditRoot.getChildren()) {
+                ValueMap values = resource.getValueMap();
+                events.add(new AiProposalAuditEvent(assetId,
+                        AiEnrichmentProposal.Status.valueOf(values.get("status", String.class)),
+                        values.get("actor", String.class),
+                        java.time.Instant.parse(values.get("occurredAt", String.class)),
+                        values.get("reason", String.class)));
+            }
+            events.sort(java.util.Comparator.comparing(AiProposalAuditEvent::occurredAt));
+            return List.copyOf(events);
+        } catch (LoginException | RuntimeException e) {
+            throw new IllegalStateException("failed to read AI review audit trail for " + assetId.path(), e);
         }
     }
 

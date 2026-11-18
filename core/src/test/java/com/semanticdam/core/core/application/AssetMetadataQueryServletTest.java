@@ -30,6 +30,7 @@ class AssetMetadataQueryServletTest {
         AssetMetadataQueryServlet servlet = new AssetMetadataQueryServlet();
         inject(servlet, "queryService", component);
 
+        context.create().resource(assetId.path());
         MockSlingHttpServletRequest request = context.request();
         request.setParameterMap(java.util.Map.of("path", new String[]{assetId.path()}));
         MockSlingHttpServletResponse response = context.response();

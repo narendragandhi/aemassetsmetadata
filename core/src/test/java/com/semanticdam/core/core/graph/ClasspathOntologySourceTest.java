@@ -10,7 +10,7 @@ class ClasspathOntologySourceTest {
         ClasspathOntologySource source = new ClasspathOntologySource("/ontology/asset-ontology.ttl");
         String turtle = source.readTurtle();
 
-        assertTrue(turtle.contains("@prefix aem:"));
-        assertTrue(turtle.contains("aem:Asset"));
+        assertTrue(turtle.contains("@prefix sdam:"));
+        assertTrue(turtle.contains("sdam:Asset a owl:Class"));
     }
 }

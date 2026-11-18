@@ -1,19 +1,29 @@
 package com.semanticdam.core.core.application;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.semanticdam.core.core.domain.AssetId;
 import com.semanticdam.core.core.domain.EmbeddingVector;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-/** Qdrant REST adapter. The collection must be created with matching size and Cosine distance. */
+/**
+ * Qdrant REST adapter. The collection is created on first use with the embedding's dimension and
+ * cosine distance. Each asset is one point whose id is derived from the asset path, so a re-index
+ * replaces it.
+ */
 public final class QdrantVectorSearchIndex implements VectorSearchIndex {
     private final HttpClient client;
     private final String baseUrl;
@@ -22,6 +32,7 @@ public final class QdrantVectorSearchIndex implements VectorSearchIndex {
     private final String modelId;
     private final String modelVersion;
     private final Duration timeout;
+    private volatile boolean collectionReady;
 
     public QdrantVectorSearchIndex(String baseUrl, String apiKey, String collection,
             String modelId, String modelVersion, Duration timeout) {
@@ -33,7 +44,7 @@ public final class QdrantVectorSearchIndex implements VectorSearchIndex {
         this.client = HttpClient.newBuilder().connectTimeout(timeout).build();
         this.baseUrl = baseUrl.replaceAll("/$", "");
         this.apiKey = apiKey == null ? "" : apiKey;
-        this.collection = collection;
+        this.collection = URLEncoder.encode(collection, StandardCharsets.UTF_8);
         this.modelId = modelId;
         this.modelVersion = modelVersion;
         this.timeout = timeout;
@@ -42,54 +53,111 @@ public final class QdrantVectorSearchIndex implements VectorSearchIndex {
     @Override
     public void upsert(AssetId assetId, EmbeddingVector embedding) {
         validate(assetId, embedding);
-        String pointId = UUID.nameUUIDFromBytes(assetId.path().getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();
-        String body = "{\"points\":[{\"id\":\"" + pointId + "\",\"vector\":" + vectorJson(embedding)
-                + ",\"payload\":{\"assetId\":\"" + JsonEscaper.escape(assetId.path())
-                + "\",\"modelId\":\"" + JsonEscaper.escape(modelId) + "\",\"modelVersion\":\""
-                + JsonEscaper.escape(modelVersion) + "\"}}]}";
-        request("PUT", "/collections/" + collection + "/points?wait=true", body);
+        ensureCollection(embedding.dimension());
+        JsonObject payload = new JsonObject();
+        payload.addProperty("assetId", assetId.path());
+        payload.addProperty("modelId", modelId);
+        payload.addProperty("modelVersion", modelVersion);
+        JsonObject point = new JsonObject();
+        point.addProperty("id", pointId(assetId));
+        point.add("vector", vector(embedding));
+        point.add("payload", payload);
+        JsonArray points = new JsonArray();
+        points.add(point);
+        JsonObject body = new JsonObject();
+        body.add("points", points);
+        request("PUT", "/collections/" + collection + "/points?wait=true", body.toString(), false);
     }
 
     @Override
     public void remove(AssetId assetId) {
         if (assetId == null) throw new IllegalArgumentException("assetId must be provided");
-        String pointId = UUID.nameUUIDFromBytes(assetId.path().getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();
-        request("POST", "/collections/" + collection + "/points/delete?wait=true",
-                "{\"points\":[\"" + pointId + "\"]}");
+        JsonArray points = new JsonArray();
+        points.add(pointId(assetId));
+        JsonObject body = new JsonObject();
+        body.add("points", points);
+        // A missing collection means there is nothing to remove.
+        request("POST", "/collections/" + collection + "/points/delete?wait=true", body.toString(), true);
     }
 
     @Override
     public List<VectorMatch> search(EmbeddingVector query, int limit) {
         if (query == null || limit <= 0) throw new IllegalArgumentException("query and positive limit are required");
-        if (!modelId.equals(query.modelId()) || !modelVersion.equals(query.modelVersion())) return List.of();
-        String response = request("POST", "/collections/" + collection + "/points/search",
-                "{\"vector\":" + vectorJson(query) + ",\"limit\":" + limit + ",\"with_payload\":true}");
+        if (!modelId.equals(query.modelId()) || !modelVersion.equals(query.modelVersion())) {
+            throw new IllegalStateException("query embedding model " + query.modelId() + "/" + query.modelVersion()
+                    + " does not match the index model " + modelId + "/" + modelVersion);
+        }
+        JsonObject body = new JsonObject();
+        body.add("vector", vector(query));
+        body.addProperty("limit", limit);
+        body.addProperty("with_payload", true);
+        String response = request("POST", "/collections/" + collection + "/points/search", body.toString(), true);
         List<VectorMatch> matches = new ArrayList<>();
-        for (String object : objectsAfter(response, "result")) {
-            String assetId = stringValue(object, "assetId");
-            String score = rawValue(object, "score");
-            if (assetId != null && score != null) matches.add(new VectorMatch(AssetId.of(assetId), Double.parseDouble(score)));
+        if (response == null) {
+            return matches;
+        }
+        for (JsonElement hit : JsonParser.parseString(response).getAsJsonObject().getAsJsonArray("result")) {
+            JsonObject object = hit.getAsJsonObject();
+            JsonObject hitPayload = object.getAsJsonObject("payload");
+            if (hitPayload != null && hitPayload.has("assetId")
+                    && modelVersion.equals(hitPayload.has("modelVersion") ? hitPayload.get("modelVersion").getAsString() : null)) {
+                matches.add(new VectorMatch(AssetId.of(hitPayload.get("assetId").getAsString()),
+                        object.get("score").getAsDouble()));
+            }
         }
         return List.copyOf(matches);
     }
 
+    private void ensureCollection(int dimension) {
+        if (collectionReady) {
+            return;
+        }
+        if (request("GET", "/collections/" + collection, null, true) == null) {
+            JsonObject vectors = new JsonObject();
+            vectors.addProperty("size", dimension);
+            vectors.addProperty("distance", "Cosine");
+            JsonObject body = new JsonObject();
+            body.add("vectors", vectors);
+            request("PUT", "/collections/" + collection, body.toString(), false);
+        }
+        collectionReady = true;
+    }
+
     private void validate(AssetId assetId, EmbeddingVector embedding) {
         if (assetId == null || embedding == null) throw new IllegalArgumentException("assetId and embedding are required");
-        if (embedding.dimension() == 0 || !modelId.equals(embedding.modelId()) || !modelVersion.equals(embedding.modelVersion())) {
-            throw new IllegalArgumentException("embedding model or version does not match index");
+        if (!modelId.equals(embedding.modelId()) || !modelVersion.equals(embedding.modelVersion())) {
+            throw new IllegalStateException("embedding model " + embedding.modelId() + "/" + embedding.modelVersion()
+                    + " does not match the index model " + modelId + "/" + modelVersion);
         }
     }
 
-    private String request(String method, String path, String body) {
+    private static String pointId(AssetId assetId) {
+        return UUID.nameUUIDFromBytes(assetId.path().getBytes(StandardCharsets.UTF_8)).toString();
+    }
+
+    private static JsonArray vector(EmbeddingVector embedding) {
+        JsonArray values = new JsonArray();
+        for (double value : embedding.values()) {
+            values.add(value);
+        }
+        return values;
+    }
+
+    /** @return the body, or null when {@code notFoundIsEmpty} and Qdrant answered 404 */
+    private String request(String method, String path, String body, boolean notFoundIsEmpty) {
         HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(baseUrl + path)).timeout(timeout)
                 .header("Content-Type", "application/json");
         if (!apiKey.isBlank()) builder.header("api-key", apiKey);
-        if ("PUT".equals(method)) builder.PUT(HttpRequest.BodyPublishers.ofString(body));
-        else builder.POST(HttpRequest.BodyPublishers.ofString(body));
+        HttpRequest.BodyPublisher publisher = body == null ? HttpRequest.BodyPublishers.noBody()
+                : HttpRequest.BodyPublishers.ofString(body);
+        builder.method(method, publisher);
         try {
             HttpResponse<String> response = client.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 404 && notFoundIsEmpty) {
+                return null;
+            }
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                throw new IllegalStateException("Qdrant returned HTTP " + response.statusCode());
+                throw new IllegalStateException("Qdrant returned HTTP " + response.statusCode() + " for " + method + " " + path);
             }
             return response.body();
         } catch (IOException ex) {
@@ -99,23 +167,4 @@ public final class QdrantVectorSearchIndex implements VectorSearchIndex {
             throw new IllegalStateException("Qdrant request interrupted", ex);
         }
     }
-
-    private String vectorJson(EmbeddingVector vector) {
-        return java.util.Arrays.stream(vector.values()).mapToObj(Double::toString).collect(java.util.stream.Collectors.joining(",", "[", "]"));
-    }
-
-    private static List<String> objectsAfter(String json, String key) {
-        int start = json.indexOf("\"" + key + "\":");
-        if (start < 0) return List.of();
-        return objects(json.substring(start));
-    }
-
-    private static List<String> objects(String json) {
-        List<String> result = new ArrayList<>(); int depth = 0; int start = -1; boolean quoted = false; boolean escaped = false;
-        for (int i = 0; i < json.length(); i++) { char c = json.charAt(i); if (escaped) { escaped = false; continue; } if (c == '\\' && quoted) { escaped = true; continue; } if (c == '"') { quoted = !quoted; continue; } if (quoted) continue; if (c == '{') { if (depth++ == 0) start = i; } if (c == '}' && --depth == 0) { result.add(json.substring(start, i + 1)); start = -1; } }
-        return result;
-    }
-
-    private static String stringValue(String json, String key) { String raw = rawValue(json, key); return raw != null && raw.startsWith("\"") ? raw.substring(1, raw.length() - 1) : null; }
-    private static String rawValue(String json, String key) { int p = json.indexOf("\"" + key + "\":"); if (p < 0) return null; int s = p + key.length() + 3; while (s < json.length() && Character.isWhitespace(json.charAt(s))) s++; if (json.charAt(s) == '"') { int e = s + 1; while (e < json.length() && json.charAt(e) != '"') e++; return json.substring(s, Math.min(e + 1, json.length())); } int e = s; while (e < json.length() && ",}".indexOf(json.charAt(e)) < 0) e++; return json.substring(s, e).trim(); }
 }

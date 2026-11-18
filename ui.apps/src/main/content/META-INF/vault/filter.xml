@@ -3,4 +3,6 @@
     <filter root="/apps/semanticdam/clientlibs"/>
     <filter root="/apps/semanticdam/components"/>
     <filter root="/apps/semanticdam/i18n"/>
+    <filter root="/oak:index/semanticdam.statement-custom-1"/>
+    <filter root="/oak:index/semanticdam.entity-custom-1"/>
 </workspaceFilter>

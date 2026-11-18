@@ -1,0 +1,10 @@
+{
+    "queue.name": "SemanticDAM asset embedding",
+    "queue.topics": ["com/semanticdam/asset/embed"],
+    "queue.type": "UNORDERED",
+    "queue.maxparallel:Integer": 2,
+    "queue.retries:Integer": 10,
+    "queue.retrydelay:Long": 30000,
+    "queue.priority": "MIN",
+    "queue.keepJobs": false
+}

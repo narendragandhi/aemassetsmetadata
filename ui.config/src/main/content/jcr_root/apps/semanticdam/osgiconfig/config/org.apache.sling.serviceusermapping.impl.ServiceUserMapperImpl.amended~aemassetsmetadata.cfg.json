@@ -1,5 +1,6 @@
 {
     "user.mapping": [
-        "semanticdam.core:semanticdam=[aem-assets-metadata-svc]"
+        "semanticdam.core:semanticdam=[aem-assets-metadata-svc]",
+        "semanticdam.core:semanticdam-invalidation=[semanticdam-invalidation-svc]"
     ]
 }

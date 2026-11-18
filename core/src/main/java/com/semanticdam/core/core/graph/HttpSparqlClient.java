@@ -1,30 +1,41 @@
 package com.semanticdam.core.core.graph;
 
-import org.apache.http.HttpEntity;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
-
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.Base64;
 import java.util.Optional;
 
+/** SPARQL 1.1 Protocol client: queries and updates sent by POST, results requested as JSON. */
 public class HttpSparqlClient implements SparqlClient {
-    private final String endpointUrl;
-    private final String username;
-    private final String password;
+    private final HttpClient client;
+    private final URI queryEndpoint;
+    private final URI updateEndpoint;
+    private final String authorization;
+    private final Duration timeout;
 
     public HttpSparqlClient(String endpointUrl, String username, String password) {
-        if (endpointUrl == null || endpointUrl.isBlank()) {
+        this(endpointUrl, endpointUrl, username, password, Duration.ofSeconds(30));
+    }
+
+    /**
+     * @param updateUrl the update endpoint; many stores (Fuseki, GraphDB) use a separate one
+     */
+    public HttpSparqlClient(String queryUrl, String updateUrl, String username, String password, Duration timeout) {
+        if (queryUrl == null || queryUrl.isBlank()) {
             throw new IllegalArgumentException("endpointUrl must be provided");
         }
-        this.endpointUrl = endpointUrl;
-        this.username = username;
-        this.password = password;
+        this.queryEndpoint = URI.create(queryUrl);
+        this.updateEndpoint = URI.create(updateUrl == null || updateUrl.isBlank() ? queryUrl : updateUrl);
+        this.timeout = timeout == null ? Duration.ofSeconds(30) : timeout;
+        this.client = HttpClient.newBuilder().connectTimeout(this.timeout).build();
+        this.authorization = username == null || username.isBlank() ? null
+                : "Basic " + Base64.getEncoder().encodeToString(
+                        (username + ":" + (password == null ? "" : password)).getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
@@ -32,7 +43,7 @@ public class HttpSparqlClient implements SparqlClient {
         if (sparqlUpdate == null || sparqlUpdate.isBlank()) {
             throw new IllegalArgumentException("sparqlUpdate must be provided");
         }
-        execute(sparqlUpdate, "application/sparql-update");
+        send(updateEndpoint, sparqlUpdate, "application/sparql-update");
     }
 
     @Override
@@ -40,26 +51,29 @@ public class HttpSparqlClient implements SparqlClient {
         if (sparqlQuery == null || sparqlQuery.isBlank()) {
             throw new IllegalArgumentException("sparqlQuery must be provided");
         }
-        return execute(sparqlQuery, "application/sparql-query");
+        return Optional.of(send(queryEndpoint, sparqlQuery, "application/sparql-query"));
     }
 
-    private Optional<String> execute(String body, String contentType) {
-        HttpPost post = new HttpPost(endpointUrl);
-        post.setEntity(new StringEntity(body, ContentType.create(contentType, StandardCharsets.UTF_8)));
-        if (username != null && !username.isBlank()) {
-            String token = java.util.Base64.getEncoder()
-                    .encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8));
-            post.setHeader("Authorization", "Basic " + token);
+    private String send(URI endpoint, String body, String contentType) {
+        HttpRequest.Builder request = HttpRequest.newBuilder(endpoint)
+                .timeout(timeout)
+                .header("Content-Type", contentType + "; charset=UTF-8")
+                .header("Accept", "application/sparql-results+json")
+                .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8));
+        if (authorization != null) {
+            request.header("Authorization", authorization);
         }
-        try (CloseableHttpClient client = HttpClients.createDefault();
-             CloseableHttpResponse response = client.execute(post)) {
-            HttpEntity entity = response.getEntity();
-            if (entity == null) {
-                return Optional.empty();
+        try {
+            HttpResponse<String> response = client.send(request.build(), HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                throw new IllegalStateException("SPARQL endpoint returned HTTP " + response.statusCode());
             }
-            return Optional.of(EntityUtils.toString(entity, StandardCharsets.UTF_8));
+            return response.body();
         } catch (IOException ex) {
-            throw new IllegalStateException("Failed to execute SPARQL request", ex);
+            throw new IllegalStateException("SPARQL request failed", ex);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("SPARQL request interrupted", ex);
         }
     }
 }

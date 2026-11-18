@@ -20,6 +20,6 @@ class AssetMetadataTripleMapperTest {
         List<GraphTriple> triples = mapper.toTriples(metadata);
 
         assertEquals(2, triples.size());
-        assertEquals("https://example.com/aem-assets/asset/content/dam/site/hero.png", triples.get(0).subject());
+        assertEquals("https://semanticdam.com/id/asset/content/dam/site/hero.png", triples.get(0).subject());
     }
 }

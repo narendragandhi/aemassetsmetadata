@@ -2,10 +2,13 @@
 
 ## One-sentence positioning
 
-SemanticDAM is a provider-neutral, human-governed metadata intelligence layer
-for AEM Assets. It turns inconsistent DAM metadata and AI suggestions into
-explainable, reusable facts that can power search, relationships, and
-contextual content.
+SemanticDAM is an accelerator that adds a governed knowledge layer to AEM
+Assets. It turns inconsistent DAM metadata, AEM tags and AI suggestions into
+validated, explainable, connected facts that Adobe's AI Search, Content
+Discovery agent and AEM MCP Server, and the customer's own experiences, can
+rely on. It complements Adobe's AI features; it does not replace them. See
+[Positioning](12-positioning-and-moat.md) for how it maps onto each Adobe
+capability.
 
 ## The problem
 
@@ -121,36 +124,33 @@ PIM, MDM, or a dedicated RDF platform.
 ## Architecture in one view
 
 ```text
- AEM DAM / external sources
-             ↓
-     mapper + validator
-             ↓
-       governed graph ← approved facts
-             ↓                 ↓
-    bounded provider       JSON/Turtle/CCVAR
-             ↓                 ↓
-       JCR proposal      AEM experiences
-       + review UI
+ AEM Assets metadata, AEM tags, PIM, Workfront
+             |
+             v
+  ontology mappings -> validation (SHACL) -> inference (taxonomy, rules)
+             |
+             v
+  governed graph: facts with provenance + entities  <- approved AI facts
+             |
+             v
+  context.json, MCP context tools, CCVAR, JSON-LD, READY events
+             |
+             v
+  Adobe AI Search / Content Discovery agent / AEM MCP Server (roadmap: write-back),
+  AEM experiences, AJO
 ```
 
-Vector search, Qdrant, OpenAI-compatible providers, SPARQL, and additional
-Adobe or local providers are adapters around this spine.
+Details: [Architecture](02-architecture.md).
 
 ## Demo story
 
-Use a WKND or sample asset and tell the story in this order:
+The current demo is scripted: `bash demo/run-demo.sh` walks through eight acts (architecture,
+problem, governed facts, controlled vocabulary, taxonomy from tags, connected assets, facts on a
+page, agents) and closes with value by audience. The talk track is in
+[Show and tell](07-show-and-tell.md).
 
-1. Show the asset’s ordinary AEM metadata.
-2. Show normalized JSON facts and their sources.
-3. Run `POST /bin/aemassets/ai/propose`.
-4. Show confidence, model, and rationale in the review UI.
-5. Approve one fact and reject another with reasons.
-6. Show that only the approved fact appears in the graph response.
-7. Render it through `((semantic_properties.sku))`.
-8. Explain how the same fact supports related-asset or semantic search.
-
-The proof is not that a model generated text. The proof is that an AEM team
-can improve metadata safely and reuse the result across consumers.
+The proof is not that a model generated text. The proof is that an AEM team can improve metadata
+safely, govern its vocabularies, and reuse the result across pages, search and agents.
 
 ## Value and success measures
 
@@ -191,22 +191,21 @@ replication, cache variation, performance, and data governance review.
 
 ## Positioning and non-claims
 
-SemanticDAM should be positioned as an AEM metadata governance and reuse layer.
-It should not currently claim to be:
+SemanticDAM is positioned as an accelerator next to AEM Assets' native AI, not
+an alternative to it. It should not claim to be:
 
-- a replacement for AEM Assets, PIM, MDM, or Content Intelligence;
+- a replacement for AEM AI Search, GenAI metadata, the Content Discovery agent,
+  the AEM MCP Server, PIM or MDM;
 - an autonomous metadata publishing system;
 - a complete OWL reasoning or enterprise RDF platform;
-- a certified compliance or provenance system;
-- a universal AI gateway or finished DAM review product.
+- a certified compliance or provenance system.
 
-Its differentiation is the combination of AEM-native integration, governed AI
-approval, provenance-aware semantic facts, and reusable experience consumption
-in one replaceable architecture.
+What it adds, and what is not yet proven, is set out in
+[Positioning](12-positioning-and-moat.md).
 
 ## Reference implementation status
 
-The repository contains the core contracts, JCR proposal persistence, provider
-seams, author review component, CCVAR-compatible resolver, vector adapter, and
-repeatable tests. See [Show and Tell](07-show-and-tell.md) for the runnable demo
-and [AI Readiness](08-ai-readiness.md) for the safety boundaries.
+Verified on a local AEM SDK 2026.7 author on 2026-11-17: ontology-driven
+ingest, AEM tags as taxonomy, validation, relationships with reasons, context
+API and MCP tools with access filtering, governed AI review, optional semantic
+grounding. See the [README](../README.md#verification-status).

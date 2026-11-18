@@ -8,6 +8,7 @@ import org.apache.sling.api.resource.ValueMap;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 public class SlingResourceAemMetadataSource implements AemMetadataSource {
     private static final String METADATA_PATH = "/jcr:content/metadata";
@@ -22,16 +23,18 @@ public class SlingResourceAemMetadataSource implements AemMetadataSource {
     }
 
     @Override
-    public Map<String, Object> readMetadata(AssetId assetId) {
+    public Optional<Map<String, Object>> readMetadata(AssetId assetId) {
         if (assetId == null) {
             throw new IllegalArgumentException("assetId must be provided");
         }
-        String metadataPath = assetId.path() + METADATA_PATH;
-        Resource metadataResource = resourceResolver.getResource(metadataPath);
+        if (resourceResolver.getResource(assetId.path()) == null) {
+            return Optional.empty();
+        }
+        Resource metadataResource = resourceResolver.getResource(assetId.path() + METADATA_PATH);
         if (metadataResource == null) {
-            return Collections.emptyMap();
+            return Optional.of(Collections.emptyMap());
         }
         ValueMap valueMap = metadataResource.getValueMap();
-        return new HashMap<>(valueMap);
+        return Optional.of(new HashMap<>(valueMap));
     }
 }

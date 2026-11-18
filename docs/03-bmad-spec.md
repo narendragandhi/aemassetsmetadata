@@ -37,12 +37,12 @@ Deliver a knowledge-graph-backed metadata layer for AEM Assets that enables rich
 
 ## Risks and Mitigations
 
-- Risk: Turtle parsing limitations.
-  Mitigation: keep a minimal parser now, replace with full RDF library later.
+- Risk: Turtle parsing and SHACL correctness without an RDF library at runtime.
+  Mitigation: full Turtle parser and a SHACL Core subset, both compared with Apache Jena in tests
+  (decision D01).
 - Risk: mismatched AEM metadata structures.
   Mitigation: define explicit metadata mapping contracts in the AEM adapter layer.
 
 ## Next Beads
 
-- Bead 0003: AEM metadata extraction service and mapping to AssetMetadata.
-- Bead 0004: Graph adapter interface and first implementation.
+See `beads/0024-context-engine.md` and the roadmap in `12-positioning-and-moat.md`.

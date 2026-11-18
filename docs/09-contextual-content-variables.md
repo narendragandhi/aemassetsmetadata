@@ -1,5 +1,15 @@
 # Contextual Content Variables (native)
 
+> **Sites pages (2026-11-17).** `semantic_properties` works on pages: the page points at an asset
+> through `semanticdam:asset` on its `jcr:content` (or an ancestor page), falling back to the
+> featured image. Values come from the `semanticdam:*` properties that write-back puts on the
+> asset's metadata, so they replicate with the asset and are read with the visitor's own
+> permissions. Tokens are HTML-escaped, left untouched in the page editor, and only GET requests
+> below the configured paths are buffered; other responses pass through byte for byte.
+> Verified on a local AEM SDK author; publish and dispatcher not yet tested. Pages stay fully
+> cached: when the asset is republished, the pages that name it are invalidated explicitly (see
+> [operations](06-operations.md#caching-pages-that-show-governed-facts)).
+
 SemanticDAM includes an optional native implementation of the ACS AEM Commons
 Contextual Content Variables content contract. It does not depend on ACS AEM
 Commons and does not require that bundle to be installed.
@@ -18,7 +28,8 @@ The built-in prefixes are:
   the nearest value for each property.
 - `semantic_properties` — reads governed SemanticDAM facts from the knowledge
   graph for the current asset, exposing predicate local names such as `sku`,
-  `brand`, and `belongsToCampaign`.
+  `brand`, and `partOfCampaign`. For a link to an entity the value is the
+  entity's label (`Summit`), not its IRI. Invalid facts are not exposed.
 
 The built-in action is `url`, for example:
 
@@ -41,7 +52,7 @@ curl -u admin:admin -X POST -d "path=$ASSET" http://localhost:4502/bin/aemassets
 curl -u admin:admin "http://localhost:4502/bin/aemassets/ai/proposals.json?path=$ASSET"
 curl -u admin:admin -X POST \
   --data-urlencode "path=$ASSET" \
-  --data-urlencode "predicate=https://example.com/aem-assets-ontology#sku" \
+  --data-urlencode "predicate=https://schema.org/sku" \
   --data-urlencode "object=SUM-2026-X1" --data-urlencode "approve=true" \
   --data-urlencode "reason=verified by DAM steward" \
   http://localhost:4502/bin/aemassets/ai/review

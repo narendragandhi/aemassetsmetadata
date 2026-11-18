@@ -12,9 +12,14 @@ AEM asset metadata today is often stored as flat key-value fields. This limits d
 - Provide a path to external graph storage without locking into a single vendor.
 - Normalize and govern metadata arriving from external systems once it lands in AEM.
 
+## Positioning
+
+An accelerator that complements AEM Assets' native AI (AI Search, GenAI metadata, Content
+Discovery agent, AEM MCP Server). See [12-positioning-and-moat.md](12-positioning-and-moat.md).
+
 ## Non-Goals
 
-- Replacing AEM Assets or AEM Search.
+- Replacing AEM Assets, AEM AI Search or any Adobe AI capability.
 - Building a full DAM UI. We focus on metadata, not UI customization.
 - One-off, siloed metadata schemas per project.
 
@@ -23,5 +28,7 @@ AEM asset metadata today is often stored as flat key-value fields. This limits d
 - A clear DDD boundary that separates AEM ingestion from graph storage.
 - A baseline ontology for asset metadata that can be extended safely.
 - TDD-friendly services and domain objects with unit tests.
-- Spec-driven delivery with BMAD, beads, and Gastown orchestration.
+- Spec-driven delivery with BMAD and beads.
+- Measurable improvement in the facts Adobe's AI features and agents work on (see the roadmap in
+  the positioning doc).
 - Documented “show and tell” flow that demonstrates authoring and external metadata ingestion.

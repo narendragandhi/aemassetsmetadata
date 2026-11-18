@@ -40,6 +40,11 @@ public final class AiEnrichmentProposal {
         return new AiEnrichmentProposal(assetId, statement, modelId, promptVersion, rationale, Status.PROPOSED);
     }
 
+    /** The same proposal about a rewritten statement, for example with a normalised source. */
+    public AiEnrichmentProposal withStatement(MetadataStatement replacement) {
+        return new AiEnrichmentProposal(assetId, replacement, modelId, promptVersion, rationale, status);
+    }
+
     public AiEnrichmentProposal approve() {
         require(Status.PROPOSED);
         return new AiEnrichmentProposal(assetId, statement, modelId, promptVersion, rationale, Status.APPROVED);
