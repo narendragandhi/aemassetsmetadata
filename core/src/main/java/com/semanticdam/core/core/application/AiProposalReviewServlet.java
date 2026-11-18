@@ -7,31 +7,46 @@ import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.SlingAllMethodsServlet;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
+
 import javax.servlet.Servlet;
 import java.io.IOException;
+import java.util.Optional;
 
+/**
+ * POST /bin/aemassets/ai/review - approves or rejects one proposal. The reviewer must be
+ * authenticated and allowed to edit the asset's metadata; their user id goes into the audit trail.
+ */
 @Component(service = Servlet.class, property = {
         "sling.servlet.methods=" + HttpConstants.METHOD_POST,
         "sling.servlet.paths=/bin/aemassets/ai/review" })
 public final class AiProposalReviewServlet extends SlingAllMethodsServlet {
+    private static final long serialVersionUID = 1L;
+
     @Reference
-    private GovernedAiEnrichmentWorkflowComponent workflow;
+    private transient GovernedAiEnrichmentWorkflowComponent workflow;
 
     @Override
     protected void doPost(SlingHttpServletRequest request, SlingHttpServletResponse response) throws IOException {
-        String path = request.getParameter("path");
+        Optional<String> path = ApiSupport.readableAssetPath(request, response);
+        if (path.isEmpty()) {
+            return;
+        }
         String predicate = request.getParameter("predicate");
         String object = request.getParameter("object");
         String reason = request.getParameter("reason");
-        String actor = request.getRemoteUser();
-        if (!AiProposalServletSupport.isDamPath(path) || predicate == null || predicate.isBlank()
-                || object == null || reason == null || reason.isBlank() || actor == null
-                || actor.isBlank() || "anonymous".equalsIgnoreCase(actor)) {
-            AiProposalServletSupport.badRequest(response, "path, predicate, object, reason and authenticated actor are required");
+        String approve = request.getParameter("approve");
+        if (predicate == null || predicate.isBlank() || object == null || reason == null || reason.isBlank()
+                || !("true".equals(approve) || "false".equals(approve))) {
+            response.sendError(SlingHttpServletResponse.SC_BAD_REQUEST,
+                    "predicate, object, reason and approve=true|false are required");
             return;
         }
-        boolean approve = Boolean.parseBoolean(request.getParameter("approve"));
-        AiProposalServletSupport.json(response, AiProposalJson.one(workflow.review(
-                AssetId.of(path), predicate, object, actor, approve, reason)));
+        if (ApiSupport.isAnonymous(request) || !ApiSupport.canEditMetadata(request, path.get())) {
+            response.sendError(SlingHttpServletResponse.SC_FORBIDDEN, "Metadata edit permission is required");
+            return;
+        }
+        ApiSupport.handle(response, () -> ApiSupport.json(response, AiProposalJson.one(workflow.review(
+                AssetId.of(path.get()), predicate, object, request.getRemoteUser(),
+                Boolean.parseBoolean(approve), reason))));
     }
 }

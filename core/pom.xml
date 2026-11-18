@@ -81,6 +81,21 @@ Import-Package: javax.annotation;version=0.0.0,*
     </build>
 
     <dependencies>
+        <!-- Test-only reference implementation: the bundle's own Turtle parser and SHACL validator
+             are compared against Apache Jena. Listed first so its dependencies win over the copies
+             inside the AEM SDK API jar. Never add this with compile scope. -->
+        <dependency>
+            <groupId>org.apache.jena</groupId>
+            <artifactId>jena-shacl</artifactId>
+            <version>4.10.0</version>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
         <dependency>
             <groupId>uk.org.lidalia</groupId>
             <artifactId>slf4j-test</artifactId>

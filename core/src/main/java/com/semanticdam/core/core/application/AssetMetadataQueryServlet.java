@@ -30,28 +30,19 @@ public class AssetMetadataQueryServlet extends SlingSafeMethodsServlet {
 
     @Override
     protected void doGet(SlingHttpServletRequest request, SlingHttpServletResponse response) throws IOException {
-        String assetPath = request.getParameter("path");
+        java.util.Optional<String> readable = ApiSupport.readableAssetPath(request, response);
+        if (readable.isEmpty()) {
+            return;
+        }
         boolean resolved = Boolean.parseBoolean(request.getParameter("resolved"));
-
-        if (!isDamPath(assetPath)) {
-            response.sendError(SlingHttpServletResponse.SC_BAD_REQUEST, "Missing path parameter");
-            return;
-        }
-
-        Optional<AssetMetadata> metadata = queryService.find(AssetId.of(assetPath));
-        if (metadata.isEmpty()) {
-            response.sendError(SlingHttpServletResponse.SC_NOT_FOUND, "No metadata for asset");
-            return;
-        }
-
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        response.setHeader("Cache-Control", "no-store");
-        response.getWriter().write(toJson(metadata.get(), resolved));
-    }
-
-    private boolean isDamPath(String path) {
-        return path != null && path.startsWith("/content/dam/") && !path.contains("/../") && !path.endsWith("/..");
+        ApiSupport.handle(response, () -> {
+            Optional<AssetMetadata> metadata = queryService.find(AssetId.of(readable.get()));
+            if (metadata.isEmpty()) {
+                response.sendError(SlingHttpServletResponse.SC_NOT_FOUND, "No metadata for asset");
+                return;
+            }
+            ApiSupport.json(response, toJson(metadata.get(), resolved));
+        });
     }
 
     private String toJson(AssetMetadata metadata, boolean resolved) {
@@ -79,7 +70,9 @@ public class AssetMetadataQueryServlet extends SlingSafeMethodsServlet {
                     .append(statement.objectIsUri())
                     .append(",\"source\":\"")
                     .append(escape(statement.source()))
-                    .append("\",\"isValid\":")
+                    .append("\",\"confidence\":")
+                    .append(statement.confidenceScore())
+                    .append(",\"isValid\":")
                     .append(statement.isValid())
                     .append("}");
             first = false;

@@ -9,9 +9,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Reference store for tests and demos; replace with a JCR-backed adapter. */
+/** Transient store for tests; {@link JcrAiProposalStore} is the deployed implementation. */
 public final class InMemoryAiProposalStore implements AiProposalStore {
     private final Map<AssetId, Collection<AiEnrichmentProposal>> proposals = new HashMap<>();
+    private final List<AiProposalAuditEvent> auditEvents = new ArrayList<>();
 
     @Override
     public synchronized void save(AiEnrichmentProposal proposal) {
@@ -30,6 +31,19 @@ public final class InMemoryAiProposalStore implements AiProposalStore {
             throw new IllegalArgumentException("assetId must be provided");
         }
         return List.copyOf(proposals.getOrDefault(assetId, List.of()));
+    }
+
+    @Override
+    public synchronized void recordAudit(AiProposalAuditEvent event, AiEnrichmentProposal proposal) {
+        if (event == null) {
+            throw new IllegalArgumentException("event must be provided");
+        }
+        auditEvents.add(event);
+    }
+
+    @Override
+    public synchronized List<AiProposalAuditEvent> auditTrail(AssetId assetId) {
+        return auditEvents.stream().filter(event -> event.assetId().equals(assetId)).toList();
     }
 
     private boolean sameProposal(AiEnrichmentProposal left, AiEnrichmentProposal right) {

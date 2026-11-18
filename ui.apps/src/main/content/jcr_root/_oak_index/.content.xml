@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Index for graph statement lookups (JcrKnowledgeGraphStore). Queries select it with
+  OPTION(INDEX TAG semanticdam). To change it, add semanticdam.statement-custom-2 next to this
+  definition instead of editing it, as required for AEM as a Cloud Service index deployments.
+-->
+<jcr:root xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
+          xmlns:oak="http://jackrabbit.apache.org/oak/ns/1.0" xmlns:rep="internal"
+    jcr:mixinTypes="[rep:AccessControllable]"
+    jcr:primaryType="nt:unstructured">
+    <semanticdam.statement-custom-1
+        jcr:primaryType="oak:QueryIndexDefinition"
+        async="[async,nrt]"
+        compatVersion="{Long}2"
+        evaluatePathRestrictions="{Boolean}true"
+        includedPaths="[/var/semanticdam/graph]"
+        queryPaths="[/var/semanticdam/graph]"
+        tags="[semanticdam]"
+        type="lucene">
+        <indexRules jcr:primaryType="nt:unstructured">
+            <nt:unstructured jcr:primaryType="nt:unstructured">
+                <properties jcr:primaryType="nt:unstructured">
+                    <resourceType
+                        jcr:primaryType="nt:unstructured"
+                        name="sling:resourceType"
+                        propertyIndex="{Boolean}true"/>
+                    <predicate
+                        jcr:primaryType="nt:unstructured"
+                        name="predicate"
+                        propertyIndex="{Boolean}true"/>
+                    <object
+                        jcr:primaryType="nt:unstructured"
+                        name="object"
+                        propertyIndex="{Boolean}true"/>
+                    <objectIsUri
+                        jcr:primaryType="nt:unstructured"
+                        name="objectIsUri"
+                        propertyIndex="{Boolean}true"
+                        type="Boolean"/>
+                </properties>
+            </nt:unstructured>
+        </indexRules>
+    </semanticdam.statement-custom-1>
+    <semanticdam.entity-custom-1
+        jcr:primaryType="oak:QueryIndexDefinition"
+        async="[async,nrt]"
+        compatVersion="{Long}2"
+        evaluatePathRestrictions="{Boolean}true"
+        includedPaths="[/var/semanticdam/entities]"
+        queryPaths="[/var/semanticdam/entities]"
+        tags="[semanticdam]"
+        type="lucene">
+        <indexRules jcr:primaryType="nt:unstructured">
+            <nt:unstructured jcr:primaryType="nt:unstructured">
+                <properties jcr:primaryType="nt:unstructured">
+                    <resourceType
+                        jcr:primaryType="nt:unstructured"
+                        name="sling:resourceType"
+                        propertyIndex="{Boolean}true"/>
+                    <status
+                        jcr:primaryType="nt:unstructured"
+                        name="status"
+                        propertyIndex="{Boolean}true"/>
+                    <type
+                        jcr:primaryType="nt:unstructured"
+                        name="type"
+                        propertyIndex="{Boolean}true"/>
+                </properties>
+            </nt:unstructured>
+        </indexRules>
+    </semanticdam.entity-custom-1>
+</jcr:root>

@@ -57,6 +57,21 @@ public final class MetadataStatement {
         return new MetadataStatement(predicateUri, objectUri, true, source, isValid, confidenceScore);
     }
 
+    public MetadataStatement withValid(boolean valid) {
+        return valid == isValid ? this
+                : new MetadataStatement(predicateUri, objectValue, objectIsUri, source, valid, confidenceScore);
+    }
+
+    public MetadataStatement withSource(String newSource) {
+        return new MetadataStatement(predicateUri, objectValue, objectIsUri, newSource, isValid, confidenceScore);
+    }
+
+    /** Same predicate and object, regardless of who asserted it. */
+    public boolean sameFact(MetadataStatement other) {
+        return other != null && objectIsUri == other.objectIsUri && predicateUri.equals(other.predicateUri)
+                && objectValue.equals(other.objectValue);
+    }
+
     public String predicateUri() {
         return predicateUri;
     }

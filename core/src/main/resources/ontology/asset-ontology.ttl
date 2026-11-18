@@ -1,43 +1,184 @@
-@prefix aem: <https://example.com/aem-assets-ontology#> .
-@prefix dc: <http://purl.org/dc/terms/> .
-@prefix owl: <http://www.w3.org/2002/07/owl#> .
-@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sdam:     <https://semanticdam.com/ontology/core#> .
+@prefix wf:       <https://semanticdam.com/ontology/workfront#> .
+@prefix strategy: <https://semanticdam.com/ontology/strategy#> .
+@prefix sustain:  <https://semanticdam.com/taxonomy/sustainability#> .
+@prefix agent:    <https://semanticdam.com/id/agent/> .
+@prefix schema:   <https://schema.org/> .
+@prefix dcterms:  <http://purl.org/dc/terms/> .
+@prefix skos:     <http://www.w3.org/2004/02/skos/core#> .
+@prefix prov:     <http://www.w3.org/ns/prov#> .
+@prefix owl:      <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:      <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:     <http://www.w3.org/2000/01/rdf-schema#> .
 
-aem:Asset owl:Class ;
-    rdfs:label "Asset" .
+# The domain ontology: what the things are and what the words mean.
+# How DAM fields map onto it, which values are valid and which rules apply is the application
+# profile (application-profile.ttl), kept separate so the model can be reused and reviewed on its
+# own. Every class, property, concept and scheme carries a skos:definition; a test enforces it.
 
-aem:AssetMetadata owl:Class ;
-    rdfs:subClassOf aem:Asset ;
-    rdfs:label "Asset Metadata Record" .
+<https://semanticdam.com/ontology/core> a owl:Ontology ;
+    dcterms:title "SemanticDAM asset ontology" ;
+    owl:versionInfo "3.0.0" .
 
-aem:sku aem:Property ;
-    rdfs:label "SKU" ;
-    aem:pattern "^[A-Z0-9-]+$" ;
-    rdfs:comment "The unique product SKU associated with the asset." .
+# ---------------------------------------------------------------------------
+# Classes
+# ---------------------------------------------------------------------------
 
-aem:brand aem:Property ;
+sdam:Asset a owl:Class ;
+    rdfs:label "Asset" ;
+    skos:definition "A digital file managed in AEM Assets, such as an image, video or document." .
+
+sdam:ProductImage a owl:Class ;
+    rdfs:subClassOf sdam:Asset ;
+    rdfs:label "Product Image" ;
+    skos:definition "An asset whose primary purpose is to depict a sellable product." .
+
+schema:Brand a owl:Class ;
     rdfs:label "Brand" ;
-    aem:pattern "^[a-zA-Z\\s]+$" ;
-    rdfs:comment "The brand associated with the asset." .
+    skos:definition "A name under which the organisation markets products or services." ;
+    sdam:instanceNamespace "https://semanticdam.com/id/brand/" .
 
-aem:pimCategory aem:Property ;
-    rdfs:label "PIM Category" ;
-    rdfs:comment "The category defined in the PIM system." .
+schema:Product a owl:Class ;
+    rdfs:label "Product" ;
+    skos:definition "A sellable item, identified by its SKU in the product information system." ;
+    sdam:instanceNamespace "https://semanticdam.com/id/product/" .
 
-aem:workfrontProjectId aem:Property ;
-    rdfs:label "Workfront Project ID" ;
-    aem:pattern "^[0-9a-f]{32}$" ;
-    rdfs:comment "The 32-character hex ID from Adobe Workfront." .
-
-aem:belongsToCampaign aem:Property ;
+sdam:Campaign a owl:Class ;
     rdfs:label "Campaign" ;
-    rdfs:comment "The marketing campaign this asset belongs to." .
+    skos:definition "A planned marketing initiative with a defined audience and time frame." ;
+    sdam:instanceNamespace "https://semanticdam.com/id/campaign/" .
 
-dc:title aem:Property ;
-    rdfs:label "Title" .
+skos:Concept a owl:Class ;
+    rdfs:label "Concept" ;
+    skos:definition "A unit of thought in a controlled vocabulary or taxonomy that an asset can be about." ;
+    sdam:instanceNamespace "https://semanticdam.com/id/concept/" .
 
-dc:description aem:Property ;
-    rdfs:label "Description" .
+skos:ConceptScheme a owl:Class ;
+    rdfs:label "Concept Scheme" ;
+    skos:definition "A controlled vocabulary or taxonomy: a set of concepts managed together." .
 
-dc:format aem:Property ;
-    rdfs:label "Mime Type" .
+# ---------------------------------------------------------------------------
+# Properties
+# ---------------------------------------------------------------------------
+
+dcterms:title a owl:DatatypeProperty ;
+    rdfs:label "Title" ;
+    skos:definition "The name given to the asset." ;
+    rdfs:domain sdam:Asset .
+
+dcterms:description a owl:DatatypeProperty ;
+    rdfs:label "Description" ;
+    skos:definition "A free-text account of what the asset shows or contains." ;
+    rdfs:domain sdam:Asset .
+
+dcterms:format a owl:DatatypeProperty ;
+    rdfs:label "Mime Type" ;
+    skos:definition "The media type of the asset's file." ;
+    rdfs:domain sdam:Asset .
+
+dcterms:subject a owl:ObjectProperty ;
+    rdfs:label "Subject" ;
+    skos:definition "The most specific concept the asset is about. Index at the narrowest applicable concept." ;
+    rdfs:domain sdam:Asset ;
+    rdfs:range skos:Concept .
+
+sdam:broaderSubject a owl:ObjectProperty ;
+    rdfs:label "Broader Subject" ;
+    skos:definition "A concept the asset is about only because one of its subjects is narrower than it. Derived, never asserted; kept apart from dcterms:subject to preserve indexing specificity." ;
+    rdfs:domain sdam:Asset ;
+    rdfs:range skos:Concept ;
+    sdam:expands dcterms:subject .
+
+schema:sku a owl:DatatypeProperty ;
+    rdfs:label "SKU" ;
+    skos:definition "The stock keeping unit of the product the asset is associated with." ;
+    rdfs:domain sdam:Asset .
+
+schema:brand a owl:ObjectProperty ;
+    rdfs:label "Brand" ;
+    skos:definition "The brand the asset is used for." ;
+    rdfs:domain sdam:Asset ;
+    rdfs:range schema:Brand .
+
+schema:category a owl:DatatypeProperty ;
+    rdfs:label "Visual Category" ;
+    skos:definition "An uncontrolled, free-text classification, typically proposed by enrichment. Prefer dcterms:subject for controlled classification." ;
+    rdfs:domain sdam:Asset .
+
+schema:contentLocation a owl:DatatypeProperty ;
+    rdfs:label "Content Location" ;
+    skos:definition "Where the scene shown in the asset takes place." ;
+    rdfs:domain sdam:Asset .
+
+sdam:depictsProduct a owl:ObjectProperty ;
+    rdfs:label "Depicts Product" ;
+    skos:definition "A product that is visible in, or the subject of, the asset." ;
+    rdfs:domain sdam:Asset ;
+    rdfs:range schema:Product .
+
+sdam:partOfCampaign a owl:ObjectProperty ;
+    rdfs:label "Campaign" ;
+    skos:definition "A marketing campaign the asset was produced for or is used in." ;
+    rdfs:domain sdam:Asset ;
+    rdfs:range sdam:Campaign .
+
+wf:projectId a owl:DatatypeProperty ;
+    rdfs:label "Workfront Project ID" ;
+    skos:definition "The identifier of the Adobe Workfront project that produced the asset." ;
+    rdfs:domain sdam:Asset .
+
+strategy:priority a owl:DatatypeProperty ;
+    rdfs:label "Priority" ;
+    skos:definition "The strategic priority tier of the asset, usually derived from its campaign." ;
+    rdfs:domain sdam:Asset .
+
+# ---------------------------------------------------------------------------
+# Agents (W3C PROV-O). Every statement is attributed to one of these, or to an AI model agent
+# minted as agent:AI%3A<model>.
+# ---------------------------------------------------------------------------
+
+agent:PIM a prov:SoftwareAgent ;
+    rdfs:label "PIM" ;
+    skos:definition "The product information management system; authoritative for products and SKUs." .
+
+agent:Workfront a prov:SoftwareAgent ;
+    rdfs:label "Workfront" ;
+    skos:definition "Adobe Workfront; authoritative for projects and campaigns." .
+
+agent:AEM a prov:SoftwareAgent ;
+    rdfs:label "AEM" ;
+    skos:definition "AEM Assets authors, metadata schemas and tags." .
+
+agent:Inference-Engine a prov:SoftwareAgent ;
+    rdfs:label "Inference-Engine" ;
+    skos:definition "SemanticDAM's own inference over the taxonomy and the profile's rules." .
+
+# ---------------------------------------------------------------------------
+# Taxonomy (SKOS). Concepts belong to a scheme; top concepts are marked.
+# ---------------------------------------------------------------------------
+
+sustain:Scheme a skos:ConceptScheme ;
+    skos:prefLabel "Sustainability" ;
+    skos:definition "Concepts describing the environmental attributes of products." ;
+    skos:hasTopConcept sustain:SustainableProduct .
+
+sustain:SustainableProduct a skos:Concept ;
+    skos:prefLabel "Sustainable Product" ;
+    skos:definition "A product made or sourced with reduced environmental impact." ;
+    skos:inScheme sustain:Scheme ;
+    skos:topConceptOf sustain:Scheme .
+
+sustain:OrganicCotton a skos:Concept ;
+    skos:prefLabel "Organic Cotton" ;
+    skos:altLabel "Organic" ;
+    skos:hiddenLabel "organic-cotton" , "Bio Cotton" ;
+    skos:definition "Cotton grown without synthetic pesticides or fertilisers." ;
+    skos:inScheme sustain:Scheme ;
+    skos:broader sustain:SustainableProduct .
+
+sustain:RecycledPolyester a skos:Concept ;
+    skos:prefLabel "Recycled Polyester" ;
+    skos:altLabel "Recycled" , "rPET" ;
+    skos:definition "Polyester produced from recycled plastic." ;
+    skos:inScheme sustain:Scheme ;
+    skos:broader sustain:SustainableProduct .

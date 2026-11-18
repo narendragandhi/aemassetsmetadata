@@ -34,4 +34,48 @@ class JcrKnowledgeGraphStoreTest {
         assertNotNull(context.resourceResolver().getResource(
                 "/var/semanticdam/graph/content/dam/site/hero.png/statements/statement-00002"));
     }
+
+    @Test
+    void storesEntitiesDeletesAssetsAndReportsFailures(AemContext context) throws Exception {
+        ResourceResolverFactory factory = mock(ResourceResolverFactory.class);
+        when(factory.getServiceResourceResolver(anyMap())).thenReturn(context.resourceResolver());
+        JcrKnowledgeGraphStore store = new JcrKnowledgeGraphStore(factory);
+        com.semanticdam.core.core.domain.Entity brand = new com.semanticdam.core.core.domain.Entity(
+                "https://semanticdam.com/id/brand/acme", "https://schema.org/Brand", "Acme");
+        AssetId assetId = AssetId.of("/content/dam/site/hero.png");
+
+        store.writeEntity(brand);
+        store.writeEntity(brand);
+        store.writeAssetMetadata(AssetMetadata.empty(assetId)
+                .add(MetadataStatement.uri("https://schema.org/brand", brand.uri(), "AEM", true, 0.75)));
+        assertEquals(brand, store.findEntity(brand.uri()).orElseThrow());
+        com.semanticdam.core.core.domain.Entity tag = new com.semanticdam.core.core.domain.Entity(
+                "https://semanticdam.com/id/tag/wknd/a/b", "http://www.w3.org/2004/02/skos/core#Concept", "B",
+                java.util.List.of("https://semanticdam.com/id/tag/wknd/a"));
+        store.writeEntity(tag);
+        assertEquals(tag, store.findEntity(tag.uri()).orElseThrow());
+        assertEquals(java.util.Optional.empty(), store.findEntity("https://semanticdam.com/id/brand/none"));
+        assertEquals("semanticdam/graph/statement", context.resourceResolver().getResource(
+                "/var/semanticdam/graph/content/dam/site/hero.png/statements/statement-00001")
+                .getValueMap().get("sling:resourceType", String.class));
+
+        store.deleteAsset(assetId);
+        assertEquals(java.util.Optional.empty(), store.findByAssetId(assetId));
+        assertNotNull(context.resourceResolver().getResource(JcrKnowledgeGraphStore.entityPath(brand.uri())));
+    }
+
+    @Test
+    void failsLoudlyWhenTheServiceUserCannotLogIn() throws Exception {
+        ResourceResolverFactory factory = mock(ResourceResolverFactory.class);
+        when(factory.getServiceResourceResolver(anyMap()))
+                .thenThrow(new org.apache.sling.api.resource.LoginException("no mapping"));
+        JcrKnowledgeGraphStore store = new JcrKnowledgeGraphStore(factory);
+        AssetId assetId = AssetId.of("/content/dam/site/hero.png");
+
+        org.junit.jupiter.api.Assertions.assertThrows(GraphStoreException.class, () -> store.findByAssetId(assetId));
+        org.junit.jupiter.api.Assertions.assertThrows(GraphStoreException.class,
+                () -> store.writeAssetMetadata(AssetMetadata.empty(assetId)));
+        org.junit.jupiter.api.Assertions.assertThrows(GraphStoreException.class,
+                () -> store.findReferencing("https://semanticdam.com/id/brand/acme"));
+    }
 }

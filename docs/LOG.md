@@ -47,3 +47,19 @@
 - 2026-03-12 Expanded documentation for external metadata ingestion and endpoint usage.
 - 2026-03-12 Added show-and-tell guide with demo flows and expected output.
 - 2026-03-12 Added demo content metadata and curl script for live show-and-tell.
+- 2026-11-16 Reviewed the repository as a context engine; found the ontology was not valid Turtle, mapper and consumers used different namespaces, the storage and SPARQL configurations never bound, service logins used an unmapped sub-service, and re-ingest erased reviewed AI facts.
+- 2026-11-16 Replaced the line-based ontology reader with a Turtle parser and an ontology model (classes, properties, SHACL shapes, mappings, source trust, SKOS taxonomy, inference rules); Apache Jena added as a test-only oracle.
+- 2026-11-16 Made brands, products, campaigns and categories entity nodes; added graph traversal and path finding.
+- 2026-11-16 Rebuilt the pipeline: ontology-driven mapping, SHACL validation, declarative inference, statement ownership by source, removal of deleted assets, Sling jobs instead of work on the observation thread.
+- 2026-11-16 Added the context API, the MCP endpoint, the reindex endpoint and per-caller access filtering on every endpoint.
+- 2026-11-16 Hardened AI governance: server-set source, no re-proposal of known or rejected facts, durable audit trail, removed the simulated vision step that wrote to the graph directly.
+- 2026-11-16 Added the Oak index, fixed OSGi configuration PIDs and repoinit ACLs, removed archetype sample classes.
+- 2026-11-17 Updated AEM SDK API to 2026.10, Core Components to 2.33.0, AEM analyser to 1.7.12 and Surefire to 3.5.6. Full build green with 114 tests. Not yet verified on a running AEM instance.
+- 2026-11-17 Deployed to the local AEM SDK 2026.7 author. Compiling against SDK API 2026.10 produced unresolvable imports (Gson 2.14, SLF4J 2.0); pinned the build to 2026.7. verify-aem-sdk.sh green; listener, delete, backfill (220 assets), ontology extension, Oak index use and per-user filtering verified by hand.
+- 2026-11-17 Mapped AEM tags (cq:tags) to SKOS concepts with the tag hierarchy as skos:broader; inference follows tag parents. Related-asset ranking now weights shared entities by rarity and halves inferred links.
+- 2026-11-17 Made the SPARQL store full read/write with reified provenance; tested against Jena's in-memory SPARQL engine.
+- 2026-11-17 Wired semantic search: OpenAI-compatible embedding provider, Qdrant adapter with collection auto-create, embed job queue, search.json and the semantic_search MCP tool. Verified live with Ollama mxbai-embed-large and Qdrant over 187 WKND assets.
+- 2026-11-17 semantic_properties on Sites pages through metadata write-back (semanticdam:*), with a narrow write ACL; CCVAR filter fixed (binary corruption, unflushed writer, no HTML escaping, providers missed after restart). Verified on a local author page.
+- 2026-11-17 Ontology Pipeline alignment: split domain ontology (3.0.0, every term defined) from the application profile; controlled vocabularies with candidate entries and steward approve/reject/merge; SKOS schemes per tag namespace, alternative and hidden labels, specific indexing with sdam:broaderSubject; PROV-O attribution; rules on governed entities. Verified live, including approve and merge.
+- 2026-11-17 Targeted dispatcher invalidation of pages that show an asset's facts (Sling Content Distribution INVALIDATE, dedicated service user); job targets the right page locally, no publish agent to accept it.
+- 2026-11-17 Guided demo (demo/run-demo.sh) with architecture and value acts; show-and-tell rewritten as a talk track. Running it found that steward decisions taken right after ingest missed assets (asynchronous index); fixed with a delayed second re-ingest pass. Once observed: after a quick redeploy the bundle stayed in Installed state and had to be started manually.

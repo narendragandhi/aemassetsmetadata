@@ -1,8 +1,8 @@
 package com.semanticdam.core.core.application;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.semanticdam.core.core.domain.AssetId;
-import com.semanticdam.core.core.domain.AssetMetadata;
-import com.semanticdam.core.core.graph.KnowledgeGraphService;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.servlets.HttpConstants;
@@ -12,9 +12,9 @@ import org.osgi.service.component.annotations.Reference;
 
 import javax.servlet.Servlet;
 import java.io.IOException;
-import java.util.Collection;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
+/** GET /bin/aemassets/suggestions.json?path=&limit= - assets that share an entity with the given asset. */
 @Component(
         service = Servlet.class,
         property = {
@@ -23,39 +23,24 @@ import java.util.stream.Collectors;
         }
 )
 public class AssetSuggestionServlet extends SlingSafeMethodsServlet {
+    private static final long serialVersionUID = 1L;
 
     @Reference
-    private KnowledgeGraphService knowledgeGraphService;
+    private transient AssetContextService contextService;
 
     @Override
     protected void doGet(SlingHttpServletRequest request, SlingHttpServletResponse response) throws IOException {
-        String path = request.getParameter("path");
-        if (!isDamPath(path)) {
-            response.sendError(SlingHttpServletResponse.SC_BAD_REQUEST, "Missing asset path");
+        Optional<String> path = ApiSupport.readableAssetPath(request, response);
+        if (path.isEmpty()) {
             return;
         }
-
-        Collection<AssetMetadata> related = knowledgeGraphService.findRelated(AssetId.of(path));
-
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        response.setHeader("Cache-Control", "no-store");
-        response.getWriter().write(toJson(related));
-    }
-
-    private boolean isDamPath(String path) {
-        return path != null && path.startsWith("/content/dam/") && !path.contains("/../") && !path.endsWith("/..");
-    }
-
-    private String toJson(Collection<AssetMetadata> related) {
-        String assetsJson = related.stream()
-                .map(metadata -> String.format("{\"path\":\"%s\"}", escape(metadata.assetId().path())))
-                .collect(Collectors.joining(","));
-        
-        return String.format("{\"count\":%d,\"suggestions\":[%s]}", related.size(), assetsJson);
-    }
-
-    private String escape(String value) {
-        return JsonEscaper.escape(value);
+        int limit = ApiSupport.boundedInt(request.getParameter("limit"), 10, 50);
+        ApiSupport.handle(response, () -> {
+            JsonArray related = contextService.related(AssetId.of(path.get()), limit, ApiSupport.readAccess(request));
+            JsonObject body = new JsonObject();
+            body.addProperty("count", related.size());
+            body.add("suggestions", related);
+            ApiSupport.json(response, body.toString());
+        });
     }
 }

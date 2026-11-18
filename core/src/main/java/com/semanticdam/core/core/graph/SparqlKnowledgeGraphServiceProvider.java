@@ -5,7 +5,10 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.metatype.annotations.Designate;
 
-@Component(service = SparqlKnowledgeGraphServiceProvider.class)
+import java.time.Duration;
+
+@Component(service = SparqlKnowledgeGraphServiceProvider.class,
+        configurationPid = "com.semanticdam.core.core.graph.SparqlEndpointConfig")
 @Designate(ocd = SparqlEndpointConfig.class)
 public class SparqlKnowledgeGraphServiceProvider {
     private volatile SparqlKnowledgeGraphStore store;
@@ -17,19 +20,9 @@ public class SparqlKnowledgeGraphServiceProvider {
             this.store = null;
             return;
         }
-        HttpSparqlClient client = new HttpSparqlClient(
-                config.endpointUrl(),
-                config.username(),
-                config.password()
-        );
-        this.store = new SparqlKnowledgeGraphStore(
-                client,
-                new AssetMetadataTripleMapper(),
-                new SimpleTurtleSerializer(),
-                new SparqlQueryBuilder(),
-                new NoopSparqlResultParser(),
-                config.graphUri()
-        );
+        HttpSparqlClient client = new HttpSparqlClient(config.endpointUrl(), config.updateUrl(),
+                config.username(), config.password(), Duration.ofSeconds(Math.max(1, config.timeoutSeconds())));
+        this.store = new SparqlKnowledgeGraphStore(client, new GraphSubjectResolver(), config.graphUri());
     }
 
     public SparqlKnowledgeGraphStore store() {

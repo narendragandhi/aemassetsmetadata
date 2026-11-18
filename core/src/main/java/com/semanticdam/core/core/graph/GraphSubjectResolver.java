@@ -6,7 +6,7 @@ public class GraphSubjectResolver {
     private final String baseAssetUri;
 
     public GraphSubjectResolver() {
-        this("https://example.com/aem-assets/asset");
+        this("https://semanticdam.com/id/asset");
     }
 
     public GraphSubjectResolver(String baseAssetUri) {

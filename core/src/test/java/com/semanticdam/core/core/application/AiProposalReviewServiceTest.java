@@ -25,7 +25,7 @@ class AiProposalReviewServiceTest {
 
         assertEquals(AiEnrichmentProposal.Status.APPROVED, reviewed.status());
         assertEquals(1, store.findByAsset(assetId).size());
-        assertEquals("steward@example.com", service.auditEvents().get(0).actor());
+        assertEquals("steward@example.com", service.auditEvents(assetId).get(0).actor());
         assertThrows(IllegalStateException.class, () -> service.review(reviewed, "steward@example.com",
                 false, "cannot change decision", Instant.now()));
     }

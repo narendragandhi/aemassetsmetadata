@@ -2,10 +2,11 @@ package com.semanticdam.core.core.application;
 
 import com.semanticdam.core.core.domain.AssetId;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
+/** In-memory metadata source for tests and demos. */
 public class MapBackedAemMetadataSource implements AemMetadataSource {
     private final Map<AssetId, Map<String, Object>> store = new HashMap<>();
 
@@ -20,10 +21,10 @@ public class MapBackedAemMetadataSource implements AemMetadataSource {
     }
 
     @Override
-    public Map<String, Object> readMetadata(AssetId assetId) {
+    public Optional<Map<String, Object>> readMetadata(AssetId assetId) {
         if (assetId == null) {
             throw new IllegalArgumentException("assetId must be provided");
         }
-        return store.getOrDefault(assetId, Collections.emptyMap());
+        return Optional.ofNullable(store.get(assetId));
     }
 }

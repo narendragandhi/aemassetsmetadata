@@ -23,14 +23,24 @@ public final class ContextualContentVariableService {
         actions.forEach(action -> this.actions.put(action.name(), action));
     }
 
+    /** How a value is escaped for the document it is inserted into. */
+    public enum Escaping { NONE, HTML, JSON }
+
+    /** @deprecated use {@link #replace(String, Resource, Escaping)}; this form does not escape HTML */
+    @Deprecated
     public String replace(String input, Resource context, boolean json) {
+        return replace(input, context, json ? Escaping.JSON : Escaping.NONE);
+    }
+
+    public String replace(String input, Resource context, Escaping escaping) {
         if (input == null || context == null) return input;
         Matcher matcher = TOKEN.matcher(input);
         StringBuffer result = new StringBuffer();
         while (matcher.find()) {
             String replacement = value(matcher.group(1), matcher.group(2), matcher.group(3), context);
             if (replacement == null) { matcher.appendReplacement(result, Matcher.quoteReplacement(matcher.group())); continue; }
-            if (json) replacement = jsonEscape(replacement);
+            if (escaping == Escaping.JSON) replacement = jsonEscape(replacement);
+            if (escaping == Escaping.HTML) replacement = htmlEscape(replacement);
             matcher.appendReplacement(result, Matcher.quoteReplacement(replacement));
         }
         matcher.appendTail(result);
@@ -49,6 +59,21 @@ public final class ContextualContentVariableService {
             value = transform.apply(value);
         }
         return value;
+    }
+
+    private static String htmlEscape(String value) {
+        StringBuilder escaped = new StringBuilder(value.length());
+        for (char c : value.toCharArray()) {
+            switch (c) {
+                case '&' -> escaped.append("&amp;");
+                case '<' -> escaped.append("&lt;");
+                case '>' -> escaped.append("&gt;");
+                case '"' -> escaped.append("&quot;");
+                case '\'' -> escaped.append("&#39;");
+                default -> escaped.append(c);
+            }
+        }
+        return escaped.toString();
     }
 
     private String jsonEscape(String value) {

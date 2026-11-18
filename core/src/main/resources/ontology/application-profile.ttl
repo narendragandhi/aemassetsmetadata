@@ -1,0 +1,204 @@
+@prefix sdam:     <https://semanticdam.com/ontology/core#> .
+@prefix wf:       <https://semanticdam.com/ontology/workfront#> .
+@prefix strategy: <https://semanticdam.com/ontology/strategy#> .
+@prefix agent:    <https://semanticdam.com/id/agent/> .
+@prefix campaign: <https://semanticdam.com/id/campaign/> .
+@prefix schema:   <https://schema.org/> .
+@prefix dcterms:  <http://purl.org/dc/terms/> .
+@prefix skos:     <http://www.w3.org/2004/02/skos/core#> .
+@prefix owl:      <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:      <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:     <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh:       <http://www.w3.org/ns/shacl#> .
+@prefix xsd:      <http://www.w3.org/2001/XMLSchema#> .
+
+# The application profile: how this deployment uses the ontology.
+#   - source systems and how much they are trusted
+#   - which DAM property feeds which predicate, and whether new entities are trusted
+#   - SHACL shapes (what valid metadata is), bundles and readiness contracts
+#   - controlled-vocabulary entries maintained by the profile owner
+#   - inference rules
+# Projects replace or extend this file; the domain ontology rarely changes.
+
+<https://semanticdam.com/profile/default> a owl:Ontology ;
+    dcterms:title "SemanticDAM default application profile" ;
+    owl:versionInfo "profile-1" .
+
+# ---------------------------------------------------------------------------
+# Source systems (PROV agents from the ontology) and their trust, 0..1
+# ---------------------------------------------------------------------------
+
+agent:PIM a sdam:SourceSystem ; sdam:trust 0.95 .
+agent:Workfront a sdam:SourceSystem ; sdam:trust 0.85 .
+agent:AEM a sdam:SourceSystem ; sdam:trust 0.75 .
+
+# ---------------------------------------------------------------------------
+# DAM property -> graph mappings
+#
+# sdam:entityPolicy decides what happens when a value does not match a known entry of the
+# controlled vocabulary (preferred, alternative or hidden label):
+#   sdam:Approved   the source is the authority for this vocabulary; a new entry is trusted
+#   sdam:Candidate  a new entry is created as a candidate; links to it are invalid until a
+#                   vocabulary steward approves it, or merges it into an existing entry
+# ---------------------------------------------------------------------------
+
+sdam:TitleMapping a sdam:PropertyMapping ;
+    sdam:sourceProperty "dc:title" ; sdam:sourceSystem agent:AEM ; sdam:predicate dcterms:title .
+
+sdam:DescriptionMapping a sdam:PropertyMapping ;
+    sdam:sourceProperty "dc:description" ; sdam:sourceSystem agent:AEM ; sdam:predicate dcterms:description .
+
+sdam:FormatMapping a sdam:PropertyMapping ;
+    sdam:sourceProperty "dc:format" ; sdam:sourceSystem agent:AEM ; sdam:predicate dcterms:format .
+
+sdam:AssetTypeMapping a sdam:PropertyMapping ;
+    sdam:sourceProperty "semanticdam:assetType" ; sdam:sourceSystem agent:AEM ; sdam:predicate rdf:type .
+
+# Free-text brand names typed by authors: not an authority, so unknown brands need review.
+sdam:BrandMapping a sdam:PropertyMapping ;
+    sdam:sourceProperty "aem:brand" ; sdam:sourceSystem agent:AEM ;
+    sdam:predicate schema:brand ; sdam:entityClass schema:Brand ; sdam:entityPolicy sdam:Candidate .
+
+sdam:SkuMapping a sdam:PropertyMapping ;
+    sdam:sourceProperty "pim:sku" ; sdam:sourceSystem agent:PIM ; sdam:predicate schema:sku .
+
+# PIM is the authority for products.
+sdam:ProductMapping a sdam:PropertyMapping ;
+    sdam:sourceProperty "pim:sku" ; sdam:sourceSystem agent:PIM ;
+    sdam:predicate sdam:depictsProduct ; sdam:entityClass schema:Product ; sdam:entityPolicy sdam:Approved .
+
+# PIM categories must match the governed taxonomy; anything else is reviewed.
+sdam:CategoryMapping a sdam:PropertyMapping ;
+    sdam:sourceProperty "pim:category" ; sdam:sourceSystem agent:PIM ;
+    sdam:predicate dcterms:subject ; sdam:entityClass skos:Concept ; sdam:entityPolicy sdam:Candidate .
+
+sdam:ProjectMapping a sdam:PropertyMapping ;
+    sdam:sourceProperty "workfront:projectID" ; sdam:sourceSystem agent:Workfront ; sdam:predicate wf:projectId .
+
+# Workfront is the authority for campaigns.
+sdam:CampaignMapping a sdam:PropertyMapping ;
+    sdam:sourceProperty "workfront:campaignName" ; sdam:sourceSystem agent:Workfront ;
+    sdam:predicate sdam:partOfCampaign ; sdam:entityClass sdam:Campaign ; sdam:entityPolicy sdam:Approved .
+
+# AEM tags are a controlled vocabulary already: each tag namespace becomes a concept scheme, the
+# tag title the preferred label, its translations alternative labels, its parent skos:broader.
+sdam:TagMapping a sdam:PropertyMapping ;
+    sdam:sourceProperty "cq:tags" ; sdam:sourceSystem agent:AEM ;
+    sdam:predicate dcterms:subject ; sdam:entityClass skos:Concept ;
+    sdam:valueKind sdam:AemTag ; sdam:entityPolicy sdam:Approved ;
+    sdam:instanceNamespace "https://semanticdam.com/id/tag/" .
+
+# ---------------------------------------------------------------------------
+# Controlled-vocabulary entries maintained in the profile
+# ---------------------------------------------------------------------------
+
+campaign:summer-promo-2026 a sdam:Campaign ;
+    skos:prefLabel "SUMMER_PROMO_2026" ;
+    skos:altLabel "Summer Promo 2026" ;
+    skos:definition "The global summer 2026 promotion." .
+
+# ---------------------------------------------------------------------------
+# SHACL shapes
+# ---------------------------------------------------------------------------
+
+sdam:AssetShape a sh:NodeShape ;
+    sh:targetClass sdam:Asset ;
+    sh:property [
+        sh:path dcterms:title ;
+        sh:datatype xsd:string ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path schema:sku ;
+        sh:datatype xsd:string ;
+        sh:pattern "^[A-Z0-9-]+$" ;
+        sh:maxCount 1 ;
+        sh:message "SKU must be upper-case letters, digits and hyphens."
+    ] ;
+    sh:property [
+        sh:path wf:projectId ;
+        sh:datatype xsd:string ;
+        sh:pattern "^[0-9a-f]{32}$" ;
+        sh:maxCount 1 ;
+        sh:message "Workfront project ID must be 32 lower-case hex characters."
+    ] ;
+    sh:property [
+        sh:path schema:brand ;
+        sh:nodeKind sh:IRI ;
+        sh:class schema:Brand ;
+        sh:maxCount 1
+    ] ;
+    sh:property [
+        sh:path sdam:depictsProduct ;
+        sh:nodeKind sh:IRI ;
+        sh:class schema:Product
+    ] ;
+    sh:property [
+        sh:path sdam:partOfCampaign ;
+        sh:nodeKind sh:IRI ;
+        sh:class sdam:Campaign
+    ] ;
+    sh:property [
+        sh:path dcterms:subject ;
+        sh:nodeKind sh:IRI ;
+        sh:class skos:Concept
+    ] ;
+    sh:property [
+        sh:path strategy:priority ;
+        sh:in ( "Tier-1-Global" "Tier-2-Regional" "Tier-3-Local" )
+    ] .
+
+sdam:BrandShape a sh:NodeShape ;
+    sh:targetClass schema:Brand ;
+    sh:property [
+        sh:path skos:prefLabel ;
+        sh:pattern "^[a-zA-Z\\s]+$" ;
+        sh:minCount 1 ;
+        sh:message "Brand names may only contain letters and spaces."
+    ] .
+
+sdam:ProductShape a sh:NodeShape ;
+    sh:targetClass schema:Product ;
+    sh:property [
+        sh:path skos:prefLabel ;
+        sh:pattern "^[A-Z0-9-]+$" ;
+        sh:minCount 1 ;
+        sh:message "A product is identified by a valid SKU."
+    ] .
+
+# A bundle: a ProductImage may only carry the listed predicates.
+sdam:ProductImageShape a sh:NodeShape ;
+    sh:targetClass sdam:ProductImage ;
+    sh:closed true ;
+    sh:ignoredProperties ( rdf:type sdam:broaderSubject ) ;
+    sh:property [ sh:path dcterms:title ; sh:minCount 1 ] ;
+    sh:property [ sh:path dcterms:description ] ;
+    sh:property [ sh:path dcterms:format ] ;
+    sh:property [ sh:path dcterms:subject ] ;
+    sh:property [ sh:path schema:brand ] ;
+    sh:property [ sh:path schema:sku ; sh:minCount 1 ] ;
+    sh:property [ sh:path schema:category ] ;
+    sh:property [ sh:path schema:contentLocation ] ;
+    sh:property [ sh:path sdam:depictsProduct ] ;
+    sh:property [ sh:path sdam:partOfCampaign ] ;
+    sh:property [ sh:path wf:projectId ] ;
+    sh:property [ sh:path strategy:priority ] .
+
+# A readiness contract: an asset that conforms raises com/semanticdam/asset/READY for "AJO".
+sdam:AjoReadyShape a sh:NodeShape , sdam:ReadinessShape ;
+    rdfs:label "AJO" ;
+    sh:property [ sh:path schema:sku ; sh:minCount 1 ] ;
+    sh:property [ sh:path sdam:partOfCampaign ; sh:minCount 1 ] .
+
+# ---------------------------------------------------------------------------
+# Inference rules. A rule matches a statement by predicate and either a specific object
+# (sdam:ifObject, preferred: it refers to a governed entity) or a pattern on the value or label
+# (sdam:ifValuePattern, for values that are not entities).
+# ---------------------------------------------------------------------------
+
+sdam:GlobalCampaignRule a sdam:InferenceRule ;
+    rdfs:label "Assets of the global summer promotion are tier 1" ;
+    sdam:ifPredicate sdam:partOfCampaign ;
+    sdam:ifObject campaign:summer-promo-2026 ;
+    sdam:thenPredicate strategy:priority ;
+    sdam:thenValue "Tier-1-Global" .

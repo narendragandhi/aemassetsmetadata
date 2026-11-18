@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
+import java.util.Optional;
 
 @Component(service = AemMetadataSource.class)
 public class SlingResourceAemMetadataSourceService implements AemMetadataSource {
@@ -42,16 +43,16 @@ public class SlingResourceAemMetadataSourceService implements AemMetadataSource 
     }
 
     @Override
-    public Map<String, Object> readMetadata(AssetId assetId) {
+    public Optional<Map<String, Object>> readMetadata(AssetId assetId) {
         Map<String, Object> authInfo = Map.of(
                 ResourceResolverFactory.SUBSERVICE, config.serviceUser()
         );
         try (ResourceResolver resolver = resourceResolverFactory.getServiceResourceResolver(authInfo)) {
-            SlingResourceAemMetadataSource delegate = new SlingResourceAemMetadataSource(resolver);
-            return delegate.readMetadata(assetId);
+            return new SlingResourceAemMetadataSource(resolver).readMetadata(assetId);
         } catch (LoginException ex) {
-            LOGGER.warn("Failed to obtain service resolver for asset metadata", ex);
-            return java.util.Collections.emptyMap();
+            // Returning "no metadata" here would make the pipeline erase the asset's facts.
+            throw new IllegalStateException("Service user '" + config.serviceUser()
+                    + "' cannot log in to read asset metadata", ex);
         }
     }
 }

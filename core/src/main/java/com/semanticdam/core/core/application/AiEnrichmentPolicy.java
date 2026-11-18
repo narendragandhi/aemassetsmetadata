@@ -34,6 +34,10 @@ public final class AiEnrichmentPolicy {
         }
     }
 
+    public Set<String> allowedPredicates() {
+        return allowedPredicates;
+    }
+
     public int maxProposals() {
         return maxProposals;
     }

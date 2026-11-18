@@ -1,0 +1,10 @@
+{
+    "queue.name": "SemanticDAM asset ingest",
+    "queue.topics": ["com/semanticdam/asset/ingest"],
+    "queue.type": "UNORDERED",
+    "queue.maxparallel:Integer": 4,
+    "queue.retries:Integer": 5,
+    "queue.retrydelay:Long": 5000,
+    "queue.priority": "MIN",
+    "queue.keepJobs": false
+}

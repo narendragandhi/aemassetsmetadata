@@ -2,6 +2,8 @@ package com.semanticdam.core.core.graph;
 
 import com.semanticdam.core.core.domain.AssetId;
 import com.semanticdam.core.core.domain.AssetMetadata;
+import com.semanticdam.core.core.domain.Entity;
+import com.semanticdam.core.core.ontology.Vocabulary;
 import com.semanticdam.core.core.domain.MetadataStatement;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,33 +47,44 @@ class InMemoryKnowledgeGraphStoreTest {
     }
 
     @Test
-    void testFindRelated() {
-        String skuPredicate = "https://example.com/aem-assets-ontology#sku";
-        String campaignPredicate = "https://example.com/aem-assets-ontology#belongsToCampaign";
+    void relatesAssetsThroughSharedEntitiesOnly() {
+        String product = "https://semanticdam.com/id/product/sum-2026";
+        String campaign = "https://semanticdam.com/id/campaign/summer-promo";
+        String format = "http://purl.org/dc/terms/format";
 
-        AssetMetadata asset1 = AssetMetadata.empty(AssetId.of("/content/dam/asset1.jpg"))
-                .add(MetadataStatement.literal(skuPredicate, "SUM-2026", "PIM"))
-                .add(MetadataStatement.literal(campaignPredicate, "SUMMER_PROMO", "Workfront"));
+        store.writeAssetMetadata(AssetMetadata.empty(AssetId.of("/content/dam/asset1.jpg"))
+                .add(MetadataStatement.uri(Vocabulary.DEPICTS_PRODUCT, product, "PIM"))
+                .add(MetadataStatement.uri(Vocabulary.PART_OF_CAMPAIGN, campaign, "Workfront"))
+                .add(MetadataStatement.uri(Vocabulary.RDF_TYPE, Vocabulary.ASSET, "AEM"))
+                .add(MetadataStatement.literal(format, "image/jpeg", "AEM")));
+        store.writeAssetMetadata(AssetMetadata.empty(AssetId.of("/content/dam/asset2.jpg"))
+                .add(MetadataStatement.uri(Vocabulary.DEPICTS_PRODUCT, product, "PIM")));
+        store.writeAssetMetadata(AssetMetadata.empty(AssetId.of("/content/dam/asset3.jpg"))
+                .add(MetadataStatement.uri(Vocabulary.PART_OF_CAMPAIGN, campaign, "Workfront")));
+        // Sharing a mime type or a class does not make two assets related.
+        store.writeAssetMetadata(AssetMetadata.empty(AssetId.of("/content/dam/other.jpg"))
+                .add(MetadataStatement.uri(Vocabulary.RDF_TYPE, Vocabulary.ASSET, "AEM"))
+                .add(MetadataStatement.literal(format, "image/jpeg", "AEM")));
 
-        AssetMetadata asset2 = AssetMetadata.empty(AssetId.of("/content/dam/asset2.jpg"))
-                .add(MetadataStatement.literal(skuPredicate, "SUM-2026", "PIM")); // Related via SKU
+        Collection<AssetMetadata> related = store.findRelated(AssetId.of("/content/dam/asset1.jpg"));
 
-        AssetMetadata asset3 = AssetMetadata.empty(AssetId.of("/content/dam/asset3.jpg"))
-                .add(MetadataStatement.literal(campaignPredicate, "SUMMER_PROMO", "Workfront")); // Related via Campaign
+        assertEquals(java.util.List.of("/content/dam/asset2.jpg", "/content/dam/asset3.jpg"),
+                related.stream().map(metadata -> metadata.assetId().path()).sorted().toList());
+        assertEquals(2, store.findReferencing(product).size());
+        assertTrue(store.findReferencing(Vocabulary.ASSET).isEmpty());
+    }
 
-        AssetMetadata unrelated = AssetMetadata.empty(AssetId.of("/content/dam/other.jpg"))
-                .add(MetadataStatement.literal(skuPredicate, "WINTER-2026", "PIM"));
+    @Test
+    void storesEntitiesAndDeletesAssets() {
+        Entity brand = new Entity("https://semanticdam.com/id/brand/acme", Vocabulary.BRAND_CLASS, "Acme");
+        AssetId assetId = AssetId.of("/content/dam/asset1.jpg");
+        store.writeEntity(brand);
+        store.writeAssetMetadata(AssetMetadata.empty(assetId).add(MetadataStatement.uri(Vocabulary.BRAND, brand.uri())));
 
-        store.writeAssetMetadata(asset1);
-        store.writeAssetMetadata(asset2);
-        store.writeAssetMetadata(asset3);
-        store.writeAssetMetadata(unrelated);
+        store.deleteAsset(assetId);
 
-        Collection<AssetMetadata> suggestions = store.findRelated(AssetId.of("/content/dam/asset1.jpg"));
-
-        assertEquals(2, suggestions.size(), "Should find 2 related assets");
-        assertTrue(suggestions.stream().anyMatch(a -> a.assetId().path().equals("/content/dam/asset2.jpg")), "Should find asset related by SKU");
-        assertTrue(suggestions.stream().anyMatch(a -> a.assetId().path().equals("/content/dam/asset3.jpg")), "Should find asset related by Campaign");
-        assertFalse(suggestions.stream().anyMatch(a -> a.assetId().path().equals("/content/dam/other.jpg")), "Should not find unrelated asset");
+        assertTrue(store.findByAssetId(assetId).isEmpty());
+        assertEquals(brand, store.findEntity(brand.uri()).orElseThrow());
+        assertFalse(store.findEntity("https://semanticdam.com/id/brand/unknown").isPresent());
     }
 }

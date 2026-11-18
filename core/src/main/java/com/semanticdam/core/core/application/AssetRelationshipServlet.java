@@ -1,8 +1,8 @@
 package com.semanticdam.core.core.application;
 
-import com.semanticdam.core.core.domain.AssetMetadata;
-import com.semanticdam.core.core.domain.MetadataStatement;
-import com.semanticdam.core.core.graph.KnowledgeGraphService;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.semanticdam.core.core.ontology.Vocabulary;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.servlets.HttpConstants;
@@ -12,8 +12,11 @@ import org.osgi.service.component.annotations.Reference;
 
 import javax.servlet.Servlet;
 import java.io.IOException;
-import java.util.Collection;
 
+/**
+ * GET /bin/aemassets/related.json - finds assets by a fact.
+ * Use {@code sku=}, {@code campaign=}, or {@code predicate=} (IRI or label) with {@code value=}.
+ */
 @Component(
         service = Servlet.class,
         property = {
@@ -22,15 +25,10 @@ import java.util.Collection;
         }
 )
 public class AssetRelationshipServlet extends SlingSafeMethodsServlet {
-
-    private static final String SKU_PREDICATE = "https://example.com/aem-assets-ontology#sku";
-    private static final String CAMPAIGN_PREDICATE = "https://example.com/aem-assets-ontology#belongsToCampaign";
+    private static final long serialVersionUID = 1L;
 
     @Reference
-    private KnowledgeGraphService knowledgeGraphService;
-
-    @Reference
-    private ConflictResolutionService conflictResolutionService;
+    private transient AssetContextService contextService;
 
     @Override
     protected void doGet(SlingHttpServletRequest request, SlingHttpServletResponse response) throws IOException {
@@ -38,59 +36,27 @@ public class AssetRelationshipServlet extends SlingSafeMethodsServlet {
         String campaign = request.getParameter("campaign");
         String predicate = request.getParameter("predicate");
         String value = request.getParameter("value");
-
-        Collection<AssetMetadata> results;
-
         if (sku != null && !sku.isBlank()) {
-            results = knowledgeGraphService.findByPredicateValue(SKU_PREDICATE, sku);
+            predicate = Vocabulary.SKU;
+            value = sku;
         } else if (campaign != null && !campaign.isBlank()) {
-            results = knowledgeGraphService.findByPredicateValue(CAMPAIGN_PREDICATE, campaign);
-        } else if (predicate != null && value != null) {
-            results = knowledgeGraphService.findByPredicateValue(predicate, value);
-        } else {
-            response.sendError(SlingHttpServletResponse.SC_BAD_REQUEST, "Missing search criteria (sku, campaign, or predicate/value)");
+            predicate = Vocabulary.PART_OF_CAMPAIGN;
+            value = campaign;
+        }
+        if (predicate == null || predicate.isBlank() || value == null || value.isBlank()) {
+            response.sendError(SlingHttpServletResponse.SC_BAD_REQUEST,
+                    "Missing search criteria (sku, campaign, or predicate and value)");
             return;
         }
-
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        response.setHeader("Cache-Control", "no-store");
-        response.getWriter().write(toJson(results));
-    }
-
-    private String toJson(Collection<AssetMetadata> results) {
-        StringBuilder builder = new StringBuilder();
-        builder.append("{\"count\":").append(results.size()).append(",\"assets\":[");
-
-        boolean firstAsset = true;
-        for (AssetMetadata metadata : results) {
-            if (!firstAsset) {
-                builder.append(',');
-            }
-            builder.append("{\"assetId\":\"").append(escape(metadata.assetId().path())).append("\",\"resolvedMetadata\":[");
-            
-            // Return only resolved (authoritative) metadata for the related assets
-            Collection<MetadataStatement> statements = conflictResolutionService.resolve(metadata);
-            
-            boolean firstStatement = true;
-            for (MetadataStatement statement : statements) {
-                if (!firstStatement) {
-                    builder.append(',');
-                }
-                builder.append("{\"p\":\"").append(escape(statement.predicateUri()))
-                       .append("\",\"o\":\"").append(escape(statement.objectValue()))
-                       .append("\",\"isValid\":").append(statement.isValid()).append("}");
-                firstStatement = false;
-            }
-            builder.append("]}");
-            firstAsset = false;
-        }
-
-        builder.append("]}");
-        return builder.toString();
-    }
-
-    private String escape(String value) {
-        return JsonEscaper.escape(value);
+        String searchPredicate = predicate;
+        String searchValue = value;
+        int limit = ApiSupport.boundedInt(request.getParameter("limit"), 50, 200);
+        ApiSupport.handle(response, () -> {
+            JsonArray assets = contextService.find(searchPredicate, searchValue, limit, ApiSupport.readAccess(request));
+            JsonObject body = new JsonObject();
+            body.addProperty("count", assets.size());
+            body.add("assets", assets);
+            ApiSupport.json(response, body.toString());
+        });
     }
 }

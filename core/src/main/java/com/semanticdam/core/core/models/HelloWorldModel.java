@@ -24,26 +24,17 @@ import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.models.annotations.Default;
 import org.apache.sling.models.annotations.Model;
 import org.apache.sling.models.annotations.injectorspecific.InjectionStrategy;
-import org.apache.sling.models.annotations.injectorspecific.OSGiService;
 import org.apache.sling.models.annotations.injectorspecific.SlingObject;
 import org.apache.sling.models.annotations.injectorspecific.ValueMapValue;
 
 import com.day.cq.wcm.api.Page;
 import com.day.cq.wcm.api.PageManager;
 
-import com.semanticdam.core.core.domain.AssetId;
-import com.semanticdam.core.core.graph.KnowledgeGraphService;
 import java.util.Collection;
 import java.util.Optional;
 
 @Model(adaptables = Resource.class)
 public class HelloWorldModel {
-
-    @OSGiService(injectionStrategy = InjectionStrategy.OPTIONAL)
-    private KnowledgeGraphService knowledgeGraphService;
-
-    @OSGiService(injectionStrategy = InjectionStrategy.OPTIONAL)
-    private com.semanticdam.core.core.application.SemanticSeoService seoService;
 
     @ValueMapValue(name=PROPERTY_RESOURCE_TYPE, injectionStrategy=InjectionStrategy.OPTIONAL)
     @Default(values="No resourceType")
@@ -56,7 +47,6 @@ public class HelloWorldModel {
     private ResourceResolver resourceResolver;
 
     private String message;
-    private String seoScript;
 
     @PostConstruct
     protected void init() {
@@ -65,29 +55,14 @@ public class HelloWorldModel {
                 .map(pm -> pm.getContainingPage(currentResource))
                 .map(Page::getPath).orElse("");
 
-        int suggestionCount = 0;
-        if (currentResource.getPath().startsWith("/content/dam")) {
-            String assetPath = currentResource.getPath();
-            if (knowledgeGraphService != null) {
-                suggestionCount = knowledgeGraphService.findRelated(AssetId.of(assetPath)).size();
-            }
-            if (seoService != null) {
-                seoScript = seoService.getJsonLd(assetPath);
-            }
-        }
-
         message = "Hello World!\n"
             + "Resource type is: " + resourceType + "\n"
-            + "Current page is:  " + currentPagePath + "\n"
-            + "Semantic Intelligence: " + (suggestionCount > 0 ? "Found " + suggestionCount + " smart suggestions!" : "Scanning graph...");
+            + "Current page is:  " + currentPagePath + "\n";
     }
 
     public String getMessage() {
         return message;
     }
 
-    public String getSeoScript() {
-        return seoScript;
-    }
 
 }

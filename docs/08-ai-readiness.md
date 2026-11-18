@@ -1,5 +1,11 @@
 # AI Readiness
 
+> **Update 2026-11-17:** Phase A and most of Phase B below are done: an OpenAI-compatible provider,
+> JCR proposal store with a durable audit trail, an OpenAI-compatible embedding provider, Qdrant
+> with collection auto-create, and embed jobs. AI proposals are meant to complement Adobe's GenAI
+> metadata (review and validation step), not replace it. See
+> [Architecture](02-architecture.md) and [Positioning](12-positioning-and-moat.md).
+
 ## Current capability
 
 SemanticDAM is AI-ready as a governed knowledge layer. It is not yet an autonomous AI enrichment product.
@@ -20,7 +26,7 @@ The current implementation provides:
   and telemetry decorator, including configurable estimated input/output cost;
 - existing source, validity, and confidence fields on normalized statements.
 
-The existing `InferenceService` remains deterministic rule logic. `SemanticVisionWorkflowProcess` remains a simulation and must not be described as a live model integration.
+The `InferenceService` is deterministic: it follows `skos:broader` and the `sdam:InferenceRule` declarations of the ontology. The simulated vision workflow step was removed; `AiProposalWorkflowProcess` is a workflow step that only creates proposals for review through the configured provider.
 
 ## Safety boundary
 
@@ -151,8 +157,7 @@ Production gates should define minimum precision and recall per predicate family
 Until the phases above are completed, do not claim that the repository provides:
 
 - a production model connector;
-- production vector search (the repository includes only a bounded in-memory
-  reference index and hybrid policy);
+- end-user search better than AEM AI Search (vector search here grounds agents on governed facts);
 - autonomous metadata publishing;
 - model quality guarantees;
 - complete prompt-injection protection;

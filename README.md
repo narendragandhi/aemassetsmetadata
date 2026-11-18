@@ -1,89 +1,121 @@
-# SemanticDAM — AEM Asset Metadata Governance Starter
+# SemanticDAM - a governed knowledge layer for AEM Assets
 
-An AEM reference implementation for normalizing DAM metadata into a small governed vocabulary, preserving provenance, and querying relationships between assets. It is a starter kit and architecture reference, not a turnkey enterprise graph platform.
+SemanticDAM is an accelerator for AEM Assets. It turns the flat metadata on assets into a governed
+knowledge graph and serves it as context to authors, downstream applications and AI agents. It
+complements Adobe's AI Search, GenAI metadata, Content Discovery agent and AEM MCP Server: those
+find and act on assets, SemanticDAM makes the facts underneath them consistent, validated,
+explainable and connected. See [positioning](docs/12-positioning-and-moat.md).
 
-## What is implemented
+For every asset it can answer: what is known, where each fact came from and how much it is trusted,
+whether it conforms to the model, which brands, products, campaigns and categories it is linked to,
+which other assets it is related to and why, and what it is ready for.
 
-* A metadata pipeline from DAM properties to canonical ontology predicates.
-* Provenance, validity, and confidence on each metadata statement.
-* In-memory and JCR graph storage adapters.
-* Relationship and metadata endpoints for local demonstrations.
-* A starter Turtle ontology and conflict-resolution service.
-* A provider-neutral, human-in-the-loop AI workflow: propose, persist, review,
-  and project approved asset facts into the graph.
+It is one OSGi bundle for AEM as a Cloud Service with no third-party runtime dependencies.
 
-The SPARQL adapter can emit updates and build read queries, but result parsing and remote relationship queries are experimental. AI vision, graph visualization, and external-system ingestion are extension points, not completed product features.
+## What it does
 
-## 🚀 Quick Start
+- **Ontology-driven.** A domain ontology (classes, properties, taxonomy; every term defined) and an
+  application profile (mappings, trust, SHACL shapes, rules). Nothing about individual fields is
+  hardcoded in Java, and projects extend the profile with their own Turtle files instead of forking.
+- **Controlled vocabularies.** Brands, products, campaigns and categories resolve against governed
+  entries through preferred, alternative and hidden labels. Values from a non-authoritative source
+  become candidates that a vocabulary steward approves, rejects or merges.
+- **A real graph.** Brands, products, campaigns, categories and AEM tags are entity nodes, with the
+  tag hierarchy as `skos:broader`. Assets are related through shared entities, ranked by how rare
+  the shared entity is, with multi-hop path finding.
+- **Provenance on every fact.** Source, confidence and validity per statement; conflict resolution
+  yields an authoritative view without discarding the raw values.
+- **Validation.** SHACL shapes flag invalid values and define closed "bundles" such as
+  `ProductImage`. Invalid facts are kept and flagged, never silently dropped.
+- **Inference.** `skos:broader` closure and declarative if/then rules, recomputed on every ingest.
+- **Governed AI enrichment.** A provider proposes, a person approves, an append-only audit trail
+  records it. Model output cannot claim a trusted source, and approved facts survive re-ingest.
+- **Semantic grounding for agents (optional).** Assets are embedded from their governed facts so an
+  agent can search by meaning and get back facts with provenance. For end-user search, AEM's AI
+  Search remains the primary experience.
+- **Pluggable storage.** JCR by default, or any SPARQL 1.1 triplestore with full read/write.
+- **Governed facts on pages.** `((semantic_properties.brand))` in Sites pages, from facts written
+  back to the asset; full-page caching kept with targeted dispatcher invalidation.
+- **Access-controlled delivery.** HTTP endpoints, an MCP server, contextual content variables and
+  JSON-LD, all filtered by the caller's own read access.
 
-1. **Build the project:**
-   ```bash
-   mvn clean install -DskipTests
-   ```
+Start with [docs/12-positioning-and-moat.md](docs/12-positioning-and-moat.md) for how it fits with
+Adobe's features, [docs/02-architecture.md](docs/02-architecture.md) for how it is built, and
+[docs/11-context-engine.md](docs/11-context-engine.md) for the API and real sample output.
 
-2. **Deploy to a local AEM SDK:**
-   ```bash
-   mvn clean install -PautoInstallSinglePackage
-   ```
+## Quick start
 
-3. **Try the metadata API:**
-   Access the semantic suggestion API for any asset:
-   ```bash
-   curl -u admin:admin "http://localhost:4502/bin/aemassets/suggestions.json?path=/content/dam/semanticdam/asset.jpg"
-   ```
+Requires Java 21 and Maven 3.9.
 
-4. **Run the repeatable SDK verification:**
-   ```bash
-   ./scripts/verify-aem-sdk.sh
-   ```
+```bash
+# build and test everything, including package validation and the AEM analyser
+CYPRESS_INSTALL_BINARY=0 MAVEN_OPTS="-Xmx4g" mvn clean install
 
-   The verifier checks the active bundle, triggers a bounded metadata re-index for the demo asset, and verifies both JSON and Turtle responses. Set `AEM_BASE_URL`, `AEM_USER`, `AEM_PASSWORD`, and `AEM_ASSET_PATH` for another SDK or asset; set `AEM_EXPECTED_VALUE` to assert a value from that asset, or leave it empty to skip that assertion.
+# core tests only
+mvn -B -pl core test
 
-5. **Verify the local vector backend:**
-   ```bash
-   bash scripts/verify-qdrant.sh
-   ```
-   This creates and removes an isolated collection after checking Qdrant health, upsert, nearest-neighbor search, and deletion.
+# deploy to a local AEM SDK author on :4502 (SDK 2026.7 or newer)
+mvn clean install -PautoInstallSinglePackage
 
-6. **Try the governed AI workflow:**
-   See [the workflow demo](docs/09-contextual-content-variables.md#governed-ai-workflow).
-   Mutations are POST-only and require an enabled provider plus an authenticated
-   reviewer.
+# check the deployment end to end
+./scripts/verify-aem-sdk.sh
+```
 
-## Architecture
+Then ask for context:
 
-The system uses a **Decoupled Metadata Pipeline**:
-1. **Source:** reads metadata from an AEM DAM resource.
-2. **Mapping and validation:** maps source properties to canonical predicates and validates them against the ontology.
-3. **Pipeline:** applies conflict rules and indexes an `AssetMetadata` record.
-4. **Storage:** uses the configured graph adapter (`in-memory` or `jcr`).
-5. **Consumption:** exposes normalized metadata and relationship queries for AEM consumers.
+```bash
+curl -u admin:admin "http://localhost:4502/bin/aemassets/context.json?path=/content/dam/semanticdam/asset.jpg"
+```
 
-## 📂 Project Structure
+To see the whole story in one go (architecture, governed facts, vocabulary stewardship, taxonomy,
+relationships, page facts, agents, value by audience):
 
-*   `core`: The Java "Brain" (Services, Domain Models, Graph Stores).
-*   `ui.apps`: AEM Components (including the **Semantic Intelligence** enabled Hello World).
-*   `ui.config`: OSGi configurations (Pre-configured for `jcr` persistence mode).
-*   `ui.content`: Sample "Digital Twin" assets.
-*   `it.tests`: integration-test module (requires a configured AEM instance).
+```bash
+bash demo/run-demo.sh          # talk track: docs/07-show-and-tell.md
+```
 
-## 🛠️ Configuration
+Existing assets are not indexed until their metadata changes. To backfill:
 
-The storage mode can be toggled via OSGi (`GraphStorageConfig`):
-*   `jcr`: persistence in `/var/semanticdam/graph`.
-*   `in-memory`: transient graph for local development and tests.
-*   `sparql`: experimental external adapter; do not use as a production read path yet.
+```bash
+curl -u admin:admin -X POST "http://localhost:4502/bin/aemassets/reindex?path=/content/dam&limit=5000"
+```
 
-## Current limitations
+## Project structure
 
-* The JCR adapter is a reference implementation and needs an explicit migration/versioning strategy before existing graph data is changed in production.
-* The public `/bin` endpoints are demonstration APIs. Add AEM authorization, dispatcher rules, rate limits, and publish-cache review before exposing them externally.
-* The AI workflow has durable proposal status, but its in-memory audit event
-  collection is not yet a durable compliance ledger; add an audit store before
-  regulated production use.
-* SPARQL result parsing, remote predicate search, and remote related-asset traversal are not complete.
-* No connector currently performs authenticated PIM or Workfront ingestion; supply data through AEM metadata or implement an adapter.
-* Run the full build in an environment where the frontend npm cache is writable; the core module can be verified independently with `mvn -B -pl core test`.
+| Module | Contents |
+|---|---|
+| `core` | The bundle: ontology, graph, pipeline, API. See [architecture](docs/02-architecture.md#packages) |
+| `ui.apps` | The AI review component and the Oak index for graph lookups |
+| `ui.config` | OSGi configuration: storage mode, service user, repoinit, job queue |
+| `ui.content` | A demo asset |
+| `it.tests`, `ui.tests`, `dispatcher` | Archetype defaults |
 
----
-*Built with SemanticDAM Core v1.0.0*
+## Verification status
+
+| Checked | How |
+|---|---|
+| Turtle parser reads the ontology exactly as Apache Jena does | unit test, every build |
+| SHACL validator reports the same violations as Jena SHACL | unit test, every build |
+| SPARQL store queries and updates are valid SPARQL with exact round-trips | unit tests against Jena's in-memory SPARQL engine |
+| Pipeline, vocabularies and stewardship, tags and schemes, inference, merge, conflict resolution, traversal, context API, MCP, semantic search, CCVAR, write-back, access filtering | 145 unit tests |
+| Bundle imports, repoinit and packages valid for AEM as a Cloud Service | AEM analyser and FileVault validation, every build |
+| Running on AEM | Local AEM SDK 2026.7 author with WKND content, 2026-11-17: `scripts/verify-aem-sdk.sh` passes; backfill of 220 assets in ~2 s; listener, delete, ontology extension, Oak index usage (query plan), per-user access filtering and semantic search (Ollama + Qdrant, 187 assets) checked by hand |
+| Also on the local SDK | Vocabulary candidates, approve and merge; tag schemes and specific indexing; EMEA expansion search; CCVAR on a Sites page (render, editor, model JSON, binary pass-through, escaping); write-back with the narrow ACL; invalidation job targets the right page |
+| Not run | Publish instance, dispatcher and CDN; a real external triplestore; AEM as a Cloud Service; load beyond a few hundred assets |
+
+## Limitations
+
+- Semantic search needs an embeddings endpoint and Qdrant; without them it is off.
+- The SHACL validator implements a subset of SHACL Core, and inference is not OWL reasoning.
+- Assets inside a moved folder are not re-indexed automatically; call the reindex endpoint.
+- Changing the JCR layout of an existing graph needs a migration; none is provided. Reindexing
+  rebuilds pipeline-owned statements but not reviewed AI facts.
+- The `/bin/aemassets` endpoints are for author. Keep them blocked on the publish dispatcher.
+- `aem.sdk.api` must not be newer than the target runtime; see
+  [operations](docs/06-operations.md#build-target).
+
+Details: [docs/11-context-engine.md](docs/11-context-engine.md#what-this-does-not-do).
+
+## License
+
+Apache License 2.0. See [LICENSE](LICENSE).

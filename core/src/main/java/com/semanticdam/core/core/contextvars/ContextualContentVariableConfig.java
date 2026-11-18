@@ -8,4 +8,7 @@ public @interface ContextualContentVariableConfig {
     @AttributeDefinition(name = "Enabled") boolean enabled() default false;
     @AttributeDefinition(name = "Rewrite HTML") boolean rewriteHtml() default true;
     @AttributeDefinition(name = "Rewrite model JSON") boolean rewriteModelJson() default true;
+    @AttributeDefinition(name = "Path prefixes",
+            description = "Only GET requests below these paths are rewritten. DAM paths are never rewritten.")
+    String[] paths() default {"/content/"};
 }

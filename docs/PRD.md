@@ -1,5 +1,12 @@
 # Product Requirements Document
 
+> **Status (2026-11-17): historical.** This PRD describes the first production baseline. The
+> implementation has moved past it: ontology-driven mapping and validation, entity graph, AEM tags,
+> MCP and context APIs, SPARQL read/write and semantic grounding. Example predicates below
+> (`https://example.com/...`, ontology version 1.0.0) are out of date. Current sources of truth:
+> [Architecture](02-architecture.md), [Context engine](11-context-engine.md),
+> [Positioning](12-positioning-and-moat.md), [Decisions](05-decisions.md).
+
 ## SemanticDAM: AEM Asset Metadata Governance and Relationship Service
 
 Version: 1.0  
@@ -441,7 +448,7 @@ Successful response:
   "ontologyVersion": "1.0.0",
   "statements": [
     {
-      "predicate": "https://example.com/aem-assets-ontology#sku",
+      "predicate": "https://schema.org/sku",
       "object": "SUM-2026",
       "objectIsUri": false,
       "source": "PIM",
@@ -473,7 +480,7 @@ The response shall include the source asset, result count, bounded suggestions, 
 ### 9.3 Find assets by fact
 
 ```http
-GET /bin/aemassets/related.json?predicate=https%3A%2F%2Fexample.com%2Faem-assets-ontology%23sku&value=SUM-2026&limit=50
+GET /bin/aemassets/related.json?predicate=https%3A%2F%2Fschema.org%2Fsku&value=SUM-2026&limit=50
 ```
 
 Only approved predicates may be queried by external callers. The API shall not expose arbitrary repository query syntax.

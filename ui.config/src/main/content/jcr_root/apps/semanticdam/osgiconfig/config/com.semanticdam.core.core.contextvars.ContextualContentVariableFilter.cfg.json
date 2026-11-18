@@ -1,0 +1,6 @@
+{
+    "enabled": true,
+    "rewriteHtml": true,
+    "rewriteModelJson": true,
+    "paths": ["/content/semanticdam/"]
+}
